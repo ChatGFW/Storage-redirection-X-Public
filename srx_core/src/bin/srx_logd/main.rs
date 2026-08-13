@@ -1,13 +1,14 @@
-use libc::{
-    AF_UNIX, SO_RCVBUF, SOCK_CLOEXEC, SOCK_DGRAM, SOCK_NONBLOCK, SOL_SOCKET, bind, c_void, close,
-    recv, sendto, setsockopt, sockaddr, sockaddr_un, socket,
-};
-use std::fs::{self, File, OpenOptions};
-use std::io::{self, BufRead, BufReader, BufWriter, Write};
-use std::mem;
-use std::path::{Path, PathBuf};
+// 日志守护进程：经 socket 收包，按 tag 分流到滚动日志与统计文件
+mod rolling;
+mod transport;
 
-const SOCKET_NAME: &[u8] = b"storage.redirect.x.logd";
+use libc::{c_void, recv};
+use rolling::RollingLog;
+use std::fs;
+use std::io::{self, BufRead, BufReader, Write};
+use std::mem;
+use transport::{ClientSocket, bind_log_socket};
+
 const LOGS_DIR: &str = "/data/adb/modules/storage.redirect.x/logs";
 const RUNNING_LOG: &str = "/data/adb/modules/storage.redirect.x/logs/running.log";
 const FILE_MONITOR_LOG: &str = "/data/adb/modules/storage.redirect.x/logs/file_monitor.log";
@@ -18,10 +19,7 @@ const MAX_RUNNING_LINES: usize = 30_000;
 const MAX_MONITOR_LINES: usize = 30_000;
 const MAX_MEDIA_STATE_LINES: usize = 30_000;
 const MAX_APP_STATUS_LINES: usize = 30_000;
-const TRIM_BATCH_LINES: usize = 200;
 const RECV_BUFFER_SIZE: usize = 8192;
-const FLUSH_BATCH_LINES: usize = 64;
-const SOCKET_RECV_BUFFER_BYTES: libc::c_int = 512 * 1024;
 
 const TAG_FILE_MONITOR: &str = "FileMonitorOp";
 const TAG_MEDIA_STATE: &str = "MediaState";
@@ -99,123 +97,6 @@ fn run_control(command: Option<String>) -> io::Result<()> {
         return Err(io::Error::last_os_error());
     };
     socket.send('I', TAG_CONTROL, &command)
-}
-
-fn bind_log_socket() -> io::Result<i32> {
-    let fd = unsafe { socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0) };
-    if fd < 0 {
-        return Err(io::Error::last_os_error());
-    }
-    configure_socket_recv_buffer(fd);
-
-    let mut addr: sockaddr_un = unsafe { mem::zeroed() };
-    addr.sun_family = AF_UNIX as _;
-    if SOCKET_NAME.len() + 1 > addr.sun_path.len() {
-        unsafe {
-            close(fd);
-        }
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "socket name too long",
-        ));
-    }
-    addr.sun_path[0] = 0;
-    for (index, byte) in SOCKET_NAME.iter().enumerate() {
-        addr.sun_path[index + 1] = *byte as _;
-    }
-
-    let len = sockaddr_un_len(SOCKET_NAME.len() + 1);
-    let ret = unsafe { bind(fd, &addr as *const _ as *const sockaddr, len) };
-    if ret != 0 {
-        let error = io::Error::last_os_error();
-        unsafe {
-            close(fd);
-        }
-        return Err(error);
-    }
-    Ok(fd)
-}
-
-fn configure_socket_recv_buffer(fd: i32) {
-    let recv_buffer = SOCKET_RECV_BUFFER_BYTES;
-    unsafe {
-        let _ = setsockopt(
-            fd,
-            SOL_SOCKET,
-            SO_RCVBUF,
-            &recv_buffer as *const _ as *const _,
-            mem::size_of_val(&recv_buffer) as libc::socklen_t,
-        );
-    }
-}
-
-fn sockaddr_un_len(path_len: usize) -> libc::socklen_t {
-    (mem::size_of::<libc::sa_family_t>() + path_len) as libc::socklen_t
-}
-
-struct ClientSocket {
-    fd: i32,
-    addr: sockaddr_un,
-    addr_len: libc::socklen_t,
-}
-
-impl ClientSocket {
-    fn new() -> Option<Self> {
-        let fd = unsafe { socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0) };
-        if fd < 0 {
-            return None;
-        }
-
-        let mut addr: sockaddr_un = unsafe { mem::zeroed() };
-        addr.sun_family = AF_UNIX as _;
-        if SOCKET_NAME.len() + 1 > addr.sun_path.len() {
-            unsafe {
-                close(fd);
-            }
-            return None;
-        }
-        addr.sun_path[0] = 0;
-        for (index, byte) in SOCKET_NAME.iter().enumerate() {
-            addr.sun_path[index + 1] = *byte as _;
-        }
-
-        Some(Self {
-            fd,
-            addr,
-            addr_len: sockaddr_un_len(SOCKET_NAME.len() + 1),
-        })
-    }
-
-    fn send(&self, level: char, tag: &str, message: &str) -> io::Result<()> {
-        let message = sanitize_transport_field(message);
-        if tag.is_empty() || message.is_empty() {
-            return Ok(());
-        }
-
-        let packet = format!("{level}\t{tag}\t{message}");
-        let ret = unsafe {
-            sendto(
-                self.fd,
-                packet.as_ptr() as *const c_void,
-                packet.len(),
-                0,
-                &self.addr as *const _ as *const sockaddr,
-                self.addr_len,
-            )
-        };
-        if ret < 0 {
-            return Err(io::Error::last_os_error());
-        }
-        Ok(())
-    }
-}
-
-impl Drop for ClientSocket {
-    fn drop(&mut self) {
-        unsafe {
-            close(self.fd);
-        }
-    }
 }
 
 struct LogState {
@@ -323,93 +204,6 @@ impl Drop for LogState {
     }
 }
 
-struct RollingLog {
-    path: PathBuf,
-    max_lines: usize,
-    line_count: usize,
-    pending_flush: usize,
-    writer: BufWriter<File>,
-}
-
-impl RollingLog {
-    fn open(path: impl Into<PathBuf>, max_lines: usize) -> io::Result<Self> {
-        let path = path.into();
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        let file = OpenOptions::new().create(true).append(true).open(&path)?;
-        Ok(Self {
-            line_count: count_lines(&path).unwrap_or(0),
-            max_lines,
-            path,
-            pending_flush: 0,
-            writer: BufWriter::new(file),
-        })
-    }
-
-    fn append(&mut self, line: &str) {
-        if line.is_empty() {
-            return;
-        }
-        if writeln!(self.writer, "{line}").is_err() {
-            return;
-        }
-
-        self.line_count += 1;
-        self.pending_flush += 1;
-        if self.pending_flush >= FLUSH_BATCH_LINES {
-            self.flush();
-        }
-        if self.line_count > self.max_lines {
-            self.trim();
-        }
-    }
-
-    fn flush(&mut self) {
-        let _ = self.writer.flush();
-        self.pending_flush = 0;
-    }
-
-    fn trim(&mut self) {
-        self.flush();
-        let drop_lines = self
-            .line_count
-            .saturating_sub(self.max_lines)
-            .saturating_add(TRIM_BATCH_LINES);
-        if drop_lines == 0 {
-            return;
-        }
-        if trim_file_drop_head(&self.path, drop_lines).is_err() {
-            return;
-        }
-
-        self.line_count = self.line_count.saturating_sub(drop_lines);
-        if let Ok(file) = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&self.path)
-        {
-            self.writer = BufWriter::new(file);
-        }
-    }
-
-    fn clear(&mut self) {
-        self.flush();
-        if fs::write(&self.path, []).is_err() {
-            return;
-        }
-        self.line_count = 0;
-        self.pending_flush = 0;
-        if let Ok(file) = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&self.path)
-        {
-            self.writer = BufWriter::new(file);
-        }
-    }
-}
-
 fn parse_packet(packet: &str) -> Option<(&str, &str, &str)> {
     let mut parts = packet.splitn(3, '\t');
     let level = parts.next()?;
@@ -469,57 +263,12 @@ fn timestamp_text() -> String {
     String::from_utf8_lossy(&buffer[..written]).to_string()
 }
 
-fn sanitize_transport_field(message: &str) -> String {
-    if !message.contains(['\n', '\r', '\t']) {
-        return message.to_string();
-    }
-
-    message
-        .chars()
-        .map(|ch| match ch {
-            '\n' | '\r' | '\t' => ' ',
-            _ => ch,
-        })
-        .collect()
-}
-
 fn flush_tag_for(tag: &str) -> Option<&'static str> {
     match tag {
         TAG_MEDIA_STATE => Some(TAG_MEDIA_STATE_FLUSH),
         TAG_APP_STATUS => Some(TAG_APP_STATUS_FLUSH),
         _ => None,
     }
-}
-
-fn count_lines(path: &Path) -> io::Result<usize> {
-    let data = fs::read(path)?;
-    Ok(data.iter().filter(|byte| **byte == b'\n').count())
-}
-
-fn trim_file_drop_head(path: &Path, drop_lines: usize) -> io::Result<()> {
-    if drop_lines == 0 {
-        return Ok(());
-    }
-
-    let data = fs::read(path)?;
-    let mut dropped = 0usize;
-    let mut start = 0usize;
-    while start < data.len() && dropped < drop_lines {
-        if data[start] == b'\n' {
-            dropped += 1;
-        }
-        start += 1;
-    }
-
-    let remaining = if dropped >= drop_lines {
-        &data[start..]
-    } else {
-        &[]
-    };
-    let temp_path = path.with_extension("tmp");
-    fs::write(&temp_path, remaining)?;
-    fs::rename(temp_path, path)?;
-    Ok(())
 }
 
 fn read_stats_total() -> i64 {
