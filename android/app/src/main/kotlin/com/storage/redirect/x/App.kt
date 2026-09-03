@@ -88,7 +88,10 @@ private val FLOATING_BOTTOM_BAR_OVERLAY_PADDING = 76.dp
 data class DetailRoute(val packageName: String, val appName: String, val userId: Int)
 
 @Composable
-fun App() {
+fun App(
+    pendingDebugPage: String? = null,
+    onDebugPageConsumed: () -> Unit = {},
+) {
     val context = LocalContext.current
     var themeSettings by remember { mutableStateOf(AppThemeController.readSettings()) }
 
@@ -187,6 +190,17 @@ fun App() {
 
         LaunchedEffect(pagerState.settledPage) {
             selectedTabIndex = pagerState.settledPage
+        }
+
+        // debug 指令 page.open 到达时切换 tab
+        LaunchedEffect(pendingDebugPage) {
+            val page = pendingDebugPage ?: return@LaunchedEffect
+            val index = navKeys.indexOf(page)
+            if (index >= 0) {
+                selectedTabIndex = index
+                scope.launch { pagerState.animateScrollToPage(index) }
+            }
+            onDebugPageConsumed()
         }
 
         // 底栏配色按 uiMode 取色：Material 走 M3 colorScheme，Miuix 走 Miuix colorScheme
