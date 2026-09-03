@@ -107,7 +107,6 @@ private fun MiuixAppTheme(
 
     MiuixTheme(
         controller = controller,
-        smoothRounding = settings.smoothRounding,
         content = content,
     )
 }

@@ -28,7 +28,7 @@ internal fun Context.runAppsListCommand(filter: String?, extras: Bundle?): Bundl
                     .filter { it.packageName != packageName }
                     .filter { info ->
                         filterText.isNullOrBlank() ||
-                            info.packageName.contains(filterText!!, ignoreCase = true) ||
+                            info.packageName.contains(filterText, ignoreCase = true) ||
                             info.loadLabel(pm).toString().contains(filterText, ignoreCase = true)
                     }
                     .map { info ->

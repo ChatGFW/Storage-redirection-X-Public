@@ -61,7 +61,7 @@ import com.storage.redirect.x.ui.theme.AppThemeSettings
 import com.storage.redirect.x.ui.theme.ColorMode
 import com.storage.redirect.x.ui.theme.keyColorOptions
 import com.storage.redirect.x.ui.util.BlurredBar
-import com.storage.redirect.x.ui.util.rememberBlurBackdrop
+import com.storage.redirect.x.ui.util.rememberTopBarBackdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -79,7 +79,6 @@ import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import top.yukonga.miuix.kmp.theme.miuixShape
 
 @Composable
 fun ColorPalettePageMiuix(
@@ -93,7 +92,7 @@ fun ColorPalettePageMiuix(
     BackHandler(onBack = onBack)
 
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-    val backdrop = rememberBlurBackdrop(themeSettings.enableBlur)
+    val backdrop = rememberTopBarBackdrop(themeSettings.enableBlur)
     val blurActive = backdrop != null
     val barColor = if (blurActive) Color.Transparent else colorScheme.surface
     val colorMode = themeSettings.colorMode
@@ -295,20 +294,6 @@ fun ColorPalettePageMiuix(
                                 enabled = bottomBarAppearance.isBlurSwitchEnabled,
                             )
                         }
-                        SwitchPreference(
-                            title = stringResource(R.string.settings_smooth_corner),
-                            summary = stringResource(R.string.settings_smooth_corner_summary),
-                            startAction = {
-                                Icon(
-                                    Icons.Rounded.RoundedCorner,
-                                    modifier = Modifier.padding(end = 6.dp),
-                                    contentDescription = null,
-                                    tint = colorScheme.onBackground,
-                                )
-                            },
-                            checked = themeSettings.smoothRounding,
-                            onCheckedChange = { onThemeSettingsChange(themeSettings.copy(smoothRounding = it)) },
-                        )
                     }
 
                     Card(
@@ -445,9 +430,9 @@ private fun ThemePreviewCardMiuix(
             modifier = Modifier
                 .fillMaxWidth(0.4f)
                 .aspectRatio(screenRatio)
-                .clip(miuixShape(20.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(bgColor)
-                .border(1.dp, colorScheme.outline, miuixShape(20.dp)),
+                .border(1.dp, colorScheme.outline, RoundedCornerShape(20.dp)),
         ) {
             Column {
                 Row(

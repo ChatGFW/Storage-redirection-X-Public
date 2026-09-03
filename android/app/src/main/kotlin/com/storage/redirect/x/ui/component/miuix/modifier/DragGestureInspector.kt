@@ -1,4 +1,4 @@
-package com.storage.redirect.x.ui.component.bottombar
+package com.storage.redirect.x.ui.component.miuix.modifier
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -12,7 +12,8 @@ import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.util.fastFirstOrNull
 
-suspend fun PointerInputScope.inspectBottomBarDragGestures(
+// 观察型拖拽手势：不消费事件，供动画层并行感知指针轨迹
+suspend fun PointerInputScope.inspectDragGestures(
     onDragStart: (down: PointerInputChange) -> Unit = {},
     onDragEnd: (change: PointerInputChange) -> Unit = {},
     onDragCancel: () -> Unit = {},
@@ -20,14 +21,16 @@ suspend fun PointerInputScope.inspectBottomBarDragGestures(
 ) {
     awaitEachGesture {
         val initialDown = awaitFirstDown(false, PointerEventPass.Initial)
+
         val down = awaitFirstDown(false)
 
         onDragStart(down)
         onDrag(initialDown, Offset.Zero)
-        val upEvent = dragBottomBarPointer(
-            pointerId = initialDown.id,
-            onDrag = { onDrag(it, it.positionChange()) },
-        )
+        val upEvent =
+            drag(
+                pointerId = initialDown.id,
+                onDrag = { onDrag(it, it.positionChange()) },
+            )
         if (upEvent == null) {
             onDragCancel()
         } else {
@@ -36,7 +39,7 @@ suspend fun PointerInputScope.inspectBottomBarDragGestures(
     }
 }
 
-private suspend inline fun AwaitPointerEventScope.dragBottomBarPointer(
+private suspend inline fun AwaitPointerEventScope.drag(
     pointerId: PointerId,
     onDrag: (PointerInputChange) -> Unit,
 ): PointerInputChange? {
@@ -46,7 +49,7 @@ private suspend inline fun AwaitPointerEventScope.dragBottomBarPointer(
     }
     var pointer = pointerId
     while (true) {
-        val change = awaitBottomBarDragOrUp(pointer) ?: return null
+        val change = awaitDragOrUp(pointer) ?: return null
         if (change.isConsumed) {
             return null
         }
@@ -58,7 +61,7 @@ private suspend inline fun AwaitPointerEventScope.dragBottomBarPointer(
     }
 }
 
-private suspend inline fun AwaitPointerEventScope.awaitBottomBarDragOrUp(
+private suspend inline fun AwaitPointerEventScope.awaitDragOrUp(
     pointerId: PointerId,
 ): PointerInputChange? {
     var pointer = pointerId
@@ -69,8 +72,9 @@ private suspend inline fun AwaitPointerEventScope.awaitBottomBarDragOrUp(
             val otherDown = event.changes.fastFirstOrNull { it.pressed }
             if (otherDown == null) {
                 return dragEvent
+            } else {
+                pointer = otherDown.id
             }
-            pointer = otherDown.id
         } else {
             val hasDragged = dragEvent.previousPosition != dragEvent.position
             if (hasDragged) {

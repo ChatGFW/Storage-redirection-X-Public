@@ -48,14 +48,10 @@ internal inline fun runDebugCommand(
     debugResult(isOk = false, message = e.message ?: "Failed: $command", command = command, target = target)
 }
 
+// content call 的 extra 类型由调用方指定，读取失败时回退默认值
 internal fun Bundle?.optionalInt(key: String, default: Int): Int {
     if (this == null || !containsKey(key)) return default
-    return when (val value = get(key)) {
-        is Int -> value
-        is Long -> value.toInt()
-        is String -> value.toIntOrNull() ?: default
-        else -> default
-    }
+    return getInt(key, default)
 }
 
 internal fun Bundle?.optionalString(key: String): String? {

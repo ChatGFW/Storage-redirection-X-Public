@@ -81,8 +81,6 @@ dependencies {
     implementation(libs.miuix.blur)
     implementation(libs.coroutines)
     implementation(libs.gson)
-    implementation(libs.backdrop)
-    implementation(libs.capsule)
     implementation(libs.hiddenapibypass)
 
     testImplementation(libs.junit4)

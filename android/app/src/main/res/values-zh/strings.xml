@@ -23,8 +23,6 @@
     <string name="settings_key_color_default">系统</string>
     <string name="settings_color_style">配色风格</string>
     <string name="settings_color_spec">配色规范</string>
-    <string name="settings_smooth_corner">平滑圆角</string>
-    <string name="settings_smooth_corner_summary">为 Miuix 组件使用更平滑的圆角。</string>
     <string name="settings_enable_blur">背景模糊</string>
     <string name="settings_enable_blur_summary">启用窗口背景模糊效果。</string>
     <string name="settings_page_scale">页面缩放</string>

@@ -23,8 +23,6 @@
     <string name="settings_key_color_default">System</string>
     <string name="settings_color_style">Color style</string>
     <string name="settings_color_spec">Color spec</string>
-    <string name="settings_smooth_corner">Smooth corners</string>
-    <string name="settings_smooth_corner_summary">Use smoother rounded corners in Miuix components.</string>
     <string name="settings_enable_blur">Background blur</string>
     <string name="settings_enable_blur_summary">Enable window background blur effect.</string>
     <string name="settings_page_scale">Page scale</string>

@@ -14,12 +14,10 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Folder
@@ -34,7 +32,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,15 +50,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.storage.redirect.x.data.cache.AppPreferences
-import com.storage.redirect.x.data.service.RootService
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.storage.redirect.x.data.cache.PreferenceKeys
+import com.storage.redirect.x.data.service.RootService
 import com.storage.redirect.x.ui.component.bottombar.AppNavigationBar
 import com.storage.redirect.x.ui.component.bottombar.BottomBarAppearanceState
-import com.storage.redirect.x.ui.component.bottombar.BottomBarBlurMode
 import com.storage.redirect.x.ui.component.bottombar.FloatingBottomBar
 import com.storage.redirect.x.ui.component.bottombar.FloatingBottomBarTab
+import com.storage.redirect.x.ui.navigation.rememberRootNavigationState
 import com.storage.redirect.x.ui.page.AppsPage
 import com.storage.redirect.x.ui.page.FileMonitorPage
 import com.storage.redirect.x.ui.page.HomePage
@@ -75,10 +70,13 @@ import com.storage.redirect.x.ui.theme.AppThemeSettings
 import com.storage.redirect.x.ui.theme.LocalEnableBlur
 import com.storage.redirect.x.ui.theme.UiMode
 import com.storage.redirect.x.ui.theme.isInDarkTheme
-import kotlinx.coroutines.launch
+import com.storage.redirect.x.ui.util.LocalTopBarBackdrop
+import com.storage.redirect.x.ui.util.rememberTopBarBackdrop
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private const val KEY_PERMISSION_GRANTED = "permission_granted"
@@ -184,12 +182,14 @@ fun App(
             stringResource(R.string.nav_settings),
         )
 
-        val pagerState = rememberPagerState(pageCount = { navKeys.size })
-        var selectedTabIndex by remember { mutableIntStateOf(pagerState.currentPage) }
-        val scope = rememberCoroutineScope()
+        val rootNavigation = rememberRootNavigationState(navKeys.size)
+        val pagerState = rootNavigation.pagerState
+        val selectedTabIndex = rootNavigation.selectedPage
 
+        // 底栏/顶栏共用外观开关
+        val isBlurEnabled = themeSettings.enableBlur && bottomBarAppearance.isFloatingBottomBarBlurEnabled
         LaunchedEffect(pagerState.settledPage) {
-            selectedTabIndex = pagerState.settledPage
+            rootNavigation.syncPage()
         }
 
         // debug 指令 page.open 到达时切换 tab
@@ -197,8 +197,7 @@ fun App(
             val page = pendingDebugPage ?: return@LaunchedEffect
             val index = navKeys.indexOf(page)
             if (index >= 0) {
-                selectedTabIndex = index
-                scope.launch { pagerState.animateScrollToPage(index) }
+                rootNavigation.animateTo(index)
             }
             onDebugPageConsumed()
         }
@@ -225,11 +224,12 @@ fun App(
         } else {
             MiuixTheme.colorScheme.onSurface
         }
-        val bottomBarBlurMode = bottomBarAppearance.blurMode
+        // 底栏与顶栏各自采样内容，共享同一个内容 backdrop
         val bottomBarBackdrop = rememberLayerBackdrop {
             drawRect(bottomBarSurfaceColor)
             drawContent()
         }
+        val topBarBackdrop = rememberTopBarBackdrop(themeSettings.enableBlur)
         val floatingBottomBarModifier = Modifier
             .padding(bottom = 12.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
         val overlayBottomPadding = if (bottomBarAppearance.isFloatingBottomBarEnabled) {
@@ -250,10 +250,8 @@ fun App(
                             icons = navIcons,
                             selectedIndex = selectedTabIndex,
                             enabled = !isAnyMenuOpen,
-                            onSelect = { index ->
-                                selectedTabIndex = index
-                                scope.launch { pagerState.animateScrollToPage(index) }
-                            },
+                            backdrop = if (isBlurEnabled) bottomBarBackdrop else null,
+                            onSelect = { index -> rootNavigation.animateTo(index) },
                         )
                     }
                 },
@@ -262,54 +260,59 @@ fun App(
                     .add(WindowInsets.displayCutout)
                     .only(WindowInsetsSides.Horizontal),
             ) { padding ->
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                        .padding(padding)
-                        .testTag("page_container_${navKeys[pagerState.settledPage]}")
-                        .then(
-                            if (bottomBarBlurMode == BottomBarBlurMode.Blur) {
-                                Modifier.layerBackdrop(bottomBarBackdrop)
-                            } else {
-                                Modifier
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier
+                            .padding(padding)
+                            .testTag("page_container_${navKeys[pagerState.settledPage]}")
+                            .then(
+                                if (isBlurEnabled || topBarBackdrop != null) {
+                                    Modifier.layerBackdrop(bottomBarBackdrop)
+                                } else {
+                                    Modifier
+                                }
+                            ),
+                        verticalAlignment = Alignment.Top,
+                        beyondViewportPageCount = navKeys.size - 1,
+                    ) { page ->
+                        CompositionLocalProvider(
+                            LocalTopBarBackdrop provides topBarBackdrop,
+                        ) {
+                            when (page) {
+                                0 -> HomePage(
+                                    themeMode = themeSettings.colorMode.value,
+                                    bottomInnerPadding = overlayBottomPadding,
+                                    onMenuStateChange = { isAnyMenuOpen = it },
+                                )
+                                1 -> AppsPage(
+                                    onAppClick = { packageName, appName, userId ->
+                                        detailRoute = DetailRoute(packageName, appName, userId)
+                                    },
+                                    configVersion = configVersion,
+                                    bottomInnerPadding = overlayBottomPadding,
+                                    onMenuStateChange = { isAnyMenuOpen = it },
+                                    onTemplatesClick = { isTemplatesPageVisible = true },
+                                )
+                                2 -> FileMonitorPage(bottomInnerPadding = overlayBottomPadding)
+                                3 -> SettingsPage(
+                                    themeSettings = themeSettings,
+                                    onThemeSettingsChange = ::updateThemeSettings,
+                                    bottomBarAppearance = bottomBarAppearance,
+                                    onBottomBarAppearanceChange = { state ->
+                                        bottomBarAppearance = state
+                                        AppPreferences.put(
+                                            PreferenceKeys.FLOATING_BOTTOM_BAR_ENABLED,
+                                            state.isFloatingBottomBarEnabled,
+                                        )
+                                        AppPreferences.put(
+                                            PreferenceKeys.FLOATING_BOTTOM_BAR_BLUR_ENABLED,
+                                            state.isFloatingBottomBarBlurEnabled,
+                                        )
+                                    },
+                                    bottomInnerPadding = overlayBottomPadding,
+                                )
                             }
-                        ),
-                    verticalAlignment = Alignment.Top,
-                    beyondViewportPageCount = navKeys.size - 1,
-                ) { page ->
-                    when (page) {
-                        0 -> HomePage(
-                            themeMode = themeSettings.colorMode.value,
-                            bottomInnerPadding = overlayBottomPadding,
-                            onMenuStateChange = { isAnyMenuOpen = it },
-                        )
-                        1 -> AppsPage(
-                            onAppClick = { packageName, appName, userId ->
-                                detailRoute = DetailRoute(packageName, appName, userId)
-                            },
-                            configVersion = configVersion,
-                            bottomInnerPadding = overlayBottomPadding,
-                            onMenuStateChange = { isAnyMenuOpen = it },
-                            onTemplatesClick = { isTemplatesPageVisible = true },
-                        )
-                        2 -> FileMonitorPage(bottomInnerPadding = overlayBottomPadding)
-                        3 -> SettingsPage(
-                            themeSettings = themeSettings,
-                            onThemeSettingsChange = ::updateThemeSettings,
-                            bottomBarAppearance = bottomBarAppearance,
-                            onBottomBarAppearanceChange = { state ->
-                                bottomBarAppearance = state
-                                AppPreferences.put(
-                                    PreferenceKeys.FLOATING_BOTTOM_BAR_ENABLED,
-                                    state.isFloatingBottomBarEnabled,
-                                )
-                                AppPreferences.put(
-                                    PreferenceKeys.FLOATING_BOTTOM_BAR_BLUR_ENABLED,
-                                    state.isFloatingBottomBarBlurEnabled,
-                                )
-                            },
-                            bottomInnerPadding = overlayBottomPadding,
-                        )
+                        }
                     }
                 }
             }
@@ -326,13 +329,10 @@ fun App(
                             modifier = floatingBottomBarModifier.testTag("bottom_bar"),
                             selectedIndex = selectedTabIndex,
                             tabTags = navKeys,
-                            onSelected = { index ->
-                                selectedTabIndex = index
-                                scope.launch { pagerState.animateScrollToPage(index) }
-                            },
+                            onSelected = { index -> rootNavigation.animateTo(index) },
                             backdrop = bottomBarBackdrop,
                             tabsCount = navKeys.size,
-                            isBlurEnabled = bottomBarAppearance.isBlurEffectActive,
+                            isBlurEnabled = isBlurEnabled,
                             isDarkTheme = isDark,
                             enabled = !isAnyMenuOpen,
                             accentColor = bottomBarAccentColor,
@@ -340,10 +340,7 @@ fun App(
                         ) {
                             navIcons.forEachIndexed { index, icon ->
                                 FloatingBottomBarTab(
-                                    onClick = {
-                                        selectedTabIndex = index
-                                        scope.launch { pagerState.animateScrollToPage(index) }
-                                    },
+                                    onClick = { rootNavigation.animateTo(index) },
                                     enabled = !isAnyMenuOpen,
                                     modifier = Modifier
                                         .defaultMinSize(minWidth = 76.dp)
@@ -388,4 +385,3 @@ fun App(
         }
     }
     }
-}
