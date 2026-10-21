@@ -13,8 +13,8 @@ class PathBrowserRepository {
         val baseDir = "/storage/emulated/$userId"
         val currentDir = if (normalized.isEmpty()) baseDir else "$baseDir/$normalized"
 
-        // 仅列目录并保留一层名称，避免文件与额外元信息干扰
-        val command = "ls -1 -p '$currentDir' 2>/dev/null"
+        // -A 列出点前缀目录；仅列目录并保留一层名称，避免文件与额外元信息干扰
+        val command = "ls -1 -A -p '$currentDir' 2>/dev/null"
         val result = RootService.runCommand(command)
         if (!result.isSuccess) {
             return emptyList()
@@ -44,7 +44,7 @@ class PathBrowserRepository {
         val baseDir = "/storage/emulated/$userId/Android/data/$packageName/sdcard"
         val currentDir = if (normalized.isEmpty()) baseDir else "$baseDir/$normalized"
 
-        val command = "ls -1 -p '$currentDir' 2>/dev/null"
+        val command = "ls -1 -A -p '$currentDir' 2>/dev/null"
         val result = RootService.runCommand(command)
         if (!result.isSuccess) return emptyList()
 
