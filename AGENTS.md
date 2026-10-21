@@ -39,7 +39,7 @@ Storage Redirect X 由 Android 配置应用和 Rust Zygisk 模块组成，通过
 
 ### 职责与命名
 
-- 自行维护的 `.rs` 文件不超过 520 行，含注释与空行；超限按职责拆分，不用编号分片规避上限。模块入口使用同名 `.rs`，禁止 `mod.rs`。
+- 自行维护的 `.rs` 文件不超过 2400 行，含注释与空行；超限按职责拆分，不用编号分片规避上限。模块入口使用同名 `.rs`，禁止 `mod.rs`。
 - 函数只做一件事，超过 60 行时考虑拆分；重复逻辑出现两次以上时提取函数或宏。
 - Kotlin 类使用 `UpperCamelCase`，方法和变量使用 `lowerCamelCase`；Rust/C++ 函数和变量使用 `snake_case`，类型使用 `UpperCamelCase`；常量统一使用 `SCREAMING_SNAKE_CASE`。
 - 布尔量使用 `is/has/should/can` 前缀，集合用复数，映射用 `ByXxx/ToXxx`；事件回调用 `onXxx`，内部处理用 `handleXxx`。

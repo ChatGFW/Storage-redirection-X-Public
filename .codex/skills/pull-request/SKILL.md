@@ -17,7 +17,7 @@ Keep one pull request focused on one independently reviewable topic. Follow `AGE
 ## Review
 
 - Changes belong to the requested topic and live in the responsible modules.
-- Maintained Rust files stay within 520 lines; required source and resource paths are permitted by the Git allowlist.
+- Maintained Rust files stay within 2400 lines; required source and resource paths are permitted by the Git allowlist.
 - Rust ABI and Hook boundaries, locking, sampled logging, and error propagation follow project constraints.
 - Kotlin file I/O and Root commands run on `Dispatchers.IO`; debug providers remain in `src/debug/`.
 - There is no excessive defensive code, unsupported fallback, or silent failure. Do not add test files by default.
