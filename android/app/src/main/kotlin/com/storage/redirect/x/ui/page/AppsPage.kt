@@ -44,8 +44,11 @@ import com.storage.redirect.x.data.service.RootService
 import com.storage.redirect.x.data.service.SystemUser
 import com.storage.redirect.x.ui.theme.LocalUiMode
 import com.storage.redirect.x.ui.theme.UiMode
+import com.storage.redirect.x.util.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -206,21 +209,34 @@ fun AppsPage(
     }
 
     suspend fun loadApps() {
+        val startedAt = android.os.SystemClock.elapsedRealtime()
         isLoading = true
-        systemUsers = RootService.getSystemUsers()
-        sharedUidRepo.load()
+        val targetUserIndex = currentUserIndex
+        // 用户和共享 UID 的 Root 查询互不依赖
+        coroutineScope {
+            val usersDeferred = async { RootService.getSystemUsers() }
+            val sharedUidDeferred = async { sharedUidRepo.load() }
+            systemUsers = usersDeferred.await()
+            config = configRepo.load(systemUsers[targetUserIndex].id)
+            sharedUidDeferred.await()
+        }
         templates = templateRepo.loadTemplates()
-        config = configRepo.load(systemUsers[currentUserIndex].id)
 
         val pm = context.packageManager
         val selfPackage = context.packageName
-        val (appList, installed) = withContext(Dispatchers.IO) {
+        val sortByInstallTime = sortMode == SortMode.INSTALL_TIME
+        val (appList, installedInfos) = withContext(Dispatchers.IO) {
             val rawList = pm.getInstalledApplications(PackageManager.GET_META_DATA)
                 .filter { it.packageName != selfPackage }
             val mapped = rawList.map { info ->
-                val installTime = try {
-                    pm.getPackageInfo(info.packageName, 0).firstInstallTime
-                } catch (_: Exception) {
+                // firstInstallTime 仅按安装时间排序时需要，避免逐包 binder 调用
+                val installTime = if (sortByInstallTime) {
+                    try {
+                        pm.getPackageInfo(info.packageName, 0).firstInstallTime
+                    } catch (_: Exception) {
+                        0L
+                    }
+                } else {
                     0L
                 }
                 AppInfo(
@@ -236,8 +252,12 @@ fun AppsPage(
         apps.clear()
         apps.addAll(appList)
         isLoading = false
+        Logger.debug(
+            "Apps loaded: count=${appList.size} user=${systemUsers[targetUserIndex].id} " +
+                "sort=$sortMode elapsed_ms=${android.os.SystemClock.elapsedRealtime() - startedAt}",
+        )
 
-        for (batch in installed.chunked(20)) {
+        for (batch in installedInfos.chunked(20)) {
             val batchIcons = withContext(Dispatchers.IO) {
                 batch.associate { it.packageName to it.loadIcon(pm) }
             }

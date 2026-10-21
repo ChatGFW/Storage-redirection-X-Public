@@ -1,6 +1,5 @@
 package com.storage.redirect.x.data.repository
 
-import android.util.Base64
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -12,7 +11,9 @@ import com.storage.redirect.x.util.Paths
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// 配置仓库：读写全局配置和应用配置
+private const val FILE_DUMP_MARKER = "@@SRX@@"
+
+// 配置仓库：读取/写入全局配置和应用配置
 class ConfigRepository {
 
     private val gson = GsonBuilder().setPrettyPrinting().create()
@@ -128,39 +129,42 @@ class ConfigRepository {
     }
 
     private suspend fun readAllAppConfigs(userId: Int): List<AppRedirectConfig> {
+        // 一次 awk 遍历全部配置，空目录不触发读取错误
         val result = RootService.runCommand(
-            "for f in ${Paths.APPS_CONFIG_DIR}/*.json; do " +
-                "[ -f \"\$f\" ] || continue; " +
-                "name=\${f##*/}; name=\${name%.json}; " +
-                "printf '%s\\t' \"\$name\"; base64 \"\$f\" | tr -d '\\n'; printf '\\n'; " +
-                "done"
+            "set -- ${Paths.APPS_CONFIG_DIR}/*.json; [ -f \"\$1\" ] || exit 0; " +
+                "awk 'FNR==1{print \"$FILE_DUMP_MARKER\" FILENAME}{print}' \"\$@\""
         )
         if (!result.isSuccess || result.stdout.isBlank()) return emptyList()
-        return result.stdout.lineSequence()
-            .mapNotNull { line -> parseAppConfigLine(line, userId) }
-            .sortedBy { it.packageName }
-            .toList()
+        return parseAppConfigDump(result.stdout, userId)
+    }
+
+    // 解析 awk 输出：@@SRX@@<路径> 行作条目分隔，其余为 json 原文
+    private fun parseAppConfigDump(stdout: String, userId: Int): List<AppRedirectConfig> {
+        val appConfigs = ArrayList<AppRedirectConfig>()
+        val content = StringBuilder()
+        var packageName: String? = null
+        fun flush() {
+            val name = packageName ?: return
+            parseAppConfigContent(name, content.toString(), userId)?.let { appConfigs.add(it) }
+            content.clear()
+        }
+        for (line in stdout.lineSequence()) {
+            if (line.startsWith(FILE_DUMP_MARKER)) {
+                flush()
+                val fileName = line.removePrefix(FILE_DUMP_MARKER).substringAfterLast('/')
+                packageName = fileName.removeSuffix(".json")
+            } else {
+                content.appendLine(line)
+            }
+        }
+        flush()
+        return appConfigs.sortedBy { it.packageName }
     }
 
     // 读取单个应用配置
     private suspend fun readAppConfig(packageName: String, userId: Int): AppRedirectConfig? {
         val path = Paths.appConfigFile(packageName)
         val content = RootService.readFile(path) ?: return null
-        return parseAppConfigContent(packageName, content, userId)
-    }
-
-    private fun parseAppConfigLine(line: String, userId: Int): AppRedirectConfig? {
-        val separatorIndex = line.indexOf('\t')
-        if (separatorIndex <= 0) return null
-        val packageName = line.substring(0, separatorIndex).trim()
-        val encoded = line.substring(separatorIndex + 1).trim()
-        if (packageName.isEmpty() || encoded.isEmpty()) return null
-        val content = try {
-            String(Base64.decode(encoded, Base64.DEFAULT), Charsets.UTF_8)
-        } catch (e: Exception) {
-            Logger.error("Decode app config failed: $packageName", e)
-            return null
-        }
         return parseAppConfigContent(packageName, content, userId)
     }
 
