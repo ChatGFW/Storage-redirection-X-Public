@@ -224,36 +224,43 @@ fun AppsPage(
 
         val pm = context.packageManager
         val selfPackage = context.packageName
+        val targetUserId = systemUsers[targetUserIndex].id
         val sortByInstallTime = sortMode == SortMode.INSTALL_TIME
         val (appList, installedInfos) = withContext(Dispatchers.IO) {
-            val rawList = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                .filter { it.packageName != selfPackage }
-            val mapped = rawList.map { info ->
-                // firstInstallTime 仅按安装时间排序时需要，避免逐包 binder 调用
-                val installTime = if (sortByInstallTime) {
-                    try {
-                        pm.getPackageInfo(info.packageName, 0).firstInstallTime
-                    } catch (_: Exception) {
+            // PackageManager 仅枚举调用方用户，其他用户通过 Root 查询
+            if (targetUserId != 0) {
+                listAppsForUser(targetUserId, selfPackage) to emptyList()
+            } else {
+                val rawList = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                    .filter { it.packageName != selfPackage }
+                val mapped = rawList.map { info ->
+                    // firstInstallTime 仅按安装时间排序时需要，避免逐包 binder 调用
+                    val installTime = if (sortByInstallTime) {
+                        try {
+                            pm.getPackageInfo(info.packageName, 0).firstInstallTime
+                        } catch (_: Exception) {
+                            0L
+                        }
+                    } else {
                         0L
                     }
-                } else {
-                    0L
-                }
-                AppInfo(
-                    packageName = info.packageName,
-                    appName = info.loadLabel(pm).toString(),
-                    isSystemApp = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
-                    firstInstallTime = installTime,
-                )
-            }.sortedBy { it.appName.lowercase() }
-            mapped to rawList
+                    AppInfo(
+                        packageName = info.packageName,
+                        appName = info.loadLabel(pm).toString(),
+                        isSystemApp = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
+                        firstInstallTime = installTime,
+                        userId = targetUserId,
+                    )
+                }.sortedBy { it.appName.lowercase() }
+                mapped to rawList
+            }
         }
 
         apps.clear()
         apps.addAll(appList)
         isLoading = false
         Logger.debug(
-            "Apps loaded: count=${appList.size} user=${systemUsers[targetUserIndex].id} " +
+            "Apps loaded: count=${appList.size} user=$targetUserId " +
                 "sort=$sortMode elapsed_ms=${android.os.SystemClock.elapsedRealtime() - startedAt}",
         )
 
@@ -284,7 +291,10 @@ fun AppsPage(
     fun reloadConfig(userIndex: Int) {
         scope.launch {
             currentUserIndex = userIndex
-            config = configRepo.load(systemUsers[userIndex].id)
+            selectedAppsForBatch.clear()
+            icons.clear()
+            loadApps()
+            appListState.scrollToItem(0)
         }
     }
 
@@ -554,4 +564,30 @@ fun AppsPage(
         UiMode.Material -> AppsPageMaterial(data = data, dialogs = dialogs, actions = actions)
         UiMode.Miuix -> AppsPageMiuix(data = data, dialogs = dialogs, actions = actions)
     }
+}
+
+// 包路径不能区分更新后的系统应用，系统标记按该用户的 PackageManager 结果查询
+private suspend fun listAppsForUser(userId: Int, selfPackage: String): List<AppInfo> {
+    val marker = "@@SRX_SYSTEM@@"
+    val result = RootService.runCommand(
+        "pm list packages -f --user $userId; echo '$marker'; pm list packages -s --user $userId",
+    )
+    if (!result.isSuccess) return emptyList()
+    val systemPackages = result.stdout.substringAfter(marker).lineSequence()
+        .map { it.removePrefix("package:").trim() }
+        .filter { it.isNotEmpty() }
+        .toHashSet()
+    return result.stdout.substringBefore(marker).lineSequence()
+        .mapNotNull { line ->
+            val packageName = line.substringAfterLast('=').trim()
+            if (packageName.isEmpty() || packageName == selfPackage) return@mapNotNull null
+            AppInfo(
+                packageName = packageName,
+                appName = packageName,
+                isSystemApp = packageName in systemPackages,
+                userId = userId,
+            )
+        }
+        .sortedBy { it.appName.lowercase() }
+        .toList()
 }
