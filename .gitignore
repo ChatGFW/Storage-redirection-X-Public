@@ -5,6 +5,7 @@
 !/CLAUDE.md
 !/LICENSE
 !/Cargo.toml
+!/Cargo.lock
 
 # Android 源码、资源与 Gradle wrapper。
 !/android/
