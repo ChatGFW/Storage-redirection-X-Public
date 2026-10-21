@@ -1,0 +1,34 @@
+---
+name: commit
+description: Prepare, review, and create Git commits for Storage Redirect X. Use when the user requests a commit, a commit message, or an amendment, and before any assistant-initiated git commit, including --amend. Pushing requires separate explicit approval.
+---
+
+# Local Commits
+
+Create an atomic commit promptly after each independently working requirement passes its necessary checks. Include only changes belonging to that requirement and follow `AGENTS.md`.
+
+## Workflow
+
+1. Confirm the repository, current branch, upstream, and worktree with `git status --short --branch`. Inspect staged and unstaged changes separately. Do not switch branches or absorb unrelated changes.
+2. Verify the final behavior using the checks appropriate to the changed paths. Run clippy for `srx_core/` changes and `lintDebug` for `android/` changes. Do not create test files by default; run existing checks where relevant.
+3. Check each new path with `git check-ignore --no-index -v <path>`. A final negated pattern permits tracking; a positive pattern excludes it. Keep build artifacts, credentials, and local plans or records out of the index. Do not bypass the allowlist with `git add -f`.
+4. Stage explicit paths with `git add -- <path>`. To stop tracking an authorized file, confirm its absolute path and use `git rm --cached -- <path>` so its local copy remains intact. Never use broad staging commands.
+5. Review `git diff --cached --check` and the complete `git diff --cached`. Confirm scope, required build inputs, license notices, and actual verification results before committing. Do not commit incomplete work or claim failed checks passed.
+6. Review the message against the rules below, then execute `git commit`. Apply the same review before `--amend`.
+7. Verify the saved message with `git log -1 --format=%B` and inspect `git status --short --branch`. Report the commit ID, scope, verification, and remaining worktree changes.
+
+## Commit Message
+
+The subject and body must be entirely in English. Chinese response and source-comment rules do not apply to Git messages.
+
+Use `type: imperative summary`, at most 70 characters. Supported types include `feat`, `fix`, `build`, `docs`, `refactor`, `chore`, and `test`.
+
+Explain why the change is needed, its final behavior, and the checks actually performed. State relevant limitations without copying raw logs. Add an issue-closing reference only after reading the issue and verifying its complete acceptance criteria.
+
+## Push and Amend
+
+Create the local commit first. Before pushing, describe the changes, remote, target branch, and all outgoing commits; wait for explicit approval. Follow any stricter task-specific push rule, including the version-bump skill.
+
+Amend only unpublished task-owned commits when authorized. Do not rewrite public history or force-push without separate explicit approval.
+
+If ownership is unclear or a command fails, preserve the worktree and index, report the concrete blocker, and do not reset or delete user changes.
