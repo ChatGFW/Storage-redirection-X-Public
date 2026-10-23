@@ -113,6 +113,38 @@ class ConfigRepository {
 
     suspend fun readFuseFixerEnabled(): Boolean = readGlobalConfig().isFuseFixerEnabled
 
+    // 保留其他用户；最后一个用户删除后，将文件移入备份目录。
+    suspend fun deleteAppConfigs(userId: Int, packageNames: Collection<String>, backupDir: String): Boolean =
+        withContext(Dispatchers.IO) {
+            for (packageName in packageNames.toSortedSet()) {
+                val path = Paths.appConfigFile(packageName)
+                val content = RootService.readFile(path) ?: return@withContext false
+                val json = try {
+                    JsonParser.parseString(content).asJsonObject
+                } catch (e: Exception) {
+                    Logger.error("Parse app config failed: $packageName", e)
+                    return@withContext false
+                }
+                val users = json.getAsJsonObject("users") ?: return@withContext false
+                if (users.remove(userId.toString()) == null) continue
+                if (users.size() == 0) {
+                    if (!archiveAppConfigFiles(packageName, backupDir)) return@withContext false
+                    continue
+                }
+                if (!writeAppConfigJson(packageName, json)) return@withContext false
+            }
+            true
+        }
+
+    private suspend fun archiveAppConfigFiles(packageName: String, backupDir: String): Boolean {
+        val path = Paths.appConfigFile(packageName)
+        if (!RootService.runCommand("mv '$path' '$backupDir/$packageName.removed.json'").isSuccess) return false
+        val sharedPath = Paths.sharedAppConfigFile(packageName)
+        return RootService.runCommand(
+            "if [ -e '$sharedPath' ]; then mv '$sharedPath' '$backupDir/$packageName.shared.removed.json'; fi"
+        ).isSuccess
+    }
+
     // 读取全局配置，字段缺失时走保守默认
     private suspend fun readGlobalConfig(): GlobalConfig {
         val content = RootService.readFile(Paths.GLOBAL_CONFIG_FILE)
@@ -233,12 +265,17 @@ class ConfigRepository {
         usersObj.add(userId.toString(), config.toUserJson())
         mergedJson.add("users", usersObj)
 
-        val content = gson.toJson(mergedJson) + "\n"
+        return writeAppConfigJson(config.packageName, mergedJson)
+    }
+
+    private suspend fun writeAppConfigJson(packageName: String, json: JsonObject): Boolean {
+        val path = Paths.appConfigFile(packageName)
+        val content = gson.toJson(json) + "\n"
         val isSaved = RootService.writeFile(path, content)
         if (isSaved) {
             mirrorSharedFile(
                 Paths.SHARED_APPS_CONFIG_DIR,
-                Paths.sharedAppConfigFile(config.packageName),
+                Paths.sharedAppConfigFile(packageName),
                 content,
             )
         }
