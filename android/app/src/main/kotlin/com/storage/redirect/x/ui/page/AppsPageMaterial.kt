@@ -184,6 +184,7 @@ internal fun AppsPageMaterial(
                             app = app,
                             drawable = data.icons[app.packageName],
                             isRedirected = redirectedSet.contains(app.packageName),
+                            isSharedUid = app.packageName in data.sharedUidPackages,
                             isSelected = data.selectedApps.any { it.packageName == app.packageName },
                             shapes = defaultSingleSegmentedShape(index, data.filteredApps.size),
                             onClick = { actions.onAppClick(app) },
@@ -220,6 +221,7 @@ private fun AppListItemMaterial(
     app: AppInfo,
     drawable: Drawable?,
     isRedirected: Boolean,
+    isSharedUid: Boolean,
     isSelected: Boolean,
     shapes: ListItemShapes,
     onClick: () -> Unit,
@@ -235,7 +237,7 @@ private fun AppListItemMaterial(
     } else {
         baseColors
     }
-    val showTags = isRedirected || app.isSystemApp
+    val showTags = isRedirected || app.isSystemApp || isSharedUid
 
     CompositionLocalProvider(LocalListItemShapes provides shapes) {
         SegmentedListItem(
@@ -267,6 +269,13 @@ private fun AppListItemMaterial(
                                 label = stringResource(R.string.apps_tag_redirected),
                                 backgroundColor = colorScheme.primary,
                                 contentColor = colorScheme.onPrimary,
+                            )
+                        }
+                        if (isSharedUid) {
+                            MaterialStatusTag(
+                                label = stringResource(R.string.apps_tag_shared_uid),
+                                backgroundColor = colorScheme.tertiaryContainer,
+                                contentColor = colorScheme.onTertiaryContainer,
                             )
                         }
                         if (app.isSystemApp) {

@@ -142,6 +142,7 @@
     <string name="apps_not_redirected">未重定向</string>
     <string name="apps_system">系统</string>
     <string name="apps_tag_redirected">已重定向</string>
+    <string name="apps_tag_shared_uid">共享 UID</string>
     <string name="apps_no_apps">未找到应用</string>
     <string name="apps_loading">加载中…</string>
     <string name="apps_refresh">刷新</string>

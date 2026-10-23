@@ -142,6 +142,7 @@
     <string name="apps_not_redirected">Not Redirected</string>
     <string name="apps_system">SYSTEM</string>
     <string name="apps_tag_redirected">REDIRECTED</string>
+    <string name="apps_tag_shared_uid">SHARED UID</string>
     <string name="apps_no_apps">No apps found</string>
     <string name="apps_loading">Loading…</string>
     <string name="apps_refresh">Refresh</string>

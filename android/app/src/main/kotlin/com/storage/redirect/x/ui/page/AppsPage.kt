@@ -75,6 +75,7 @@ internal data class AppsPageData(
     val templates: List<RedirectTemplate>,
     val selectedTemplate: RedirectTemplate?,
     val sharedPackages: List<String>,
+    val sharedUidPackages: Set<String>,
     val selectedBatchCount: Int,
     val bottomInnerPadding: Dp,
 )
@@ -165,6 +166,7 @@ fun AppsPage(
     val showSharedUidConfirmDialog = remember { mutableStateOf(false) }
     val showRestoreRulesDialog = remember { mutableStateOf(false) }
     var sharedPackagesForSelectedApp by remember { mutableStateOf<List<String>>(emptyList()) }
+    var sharedUidPackageSet by remember { mutableStateOf<Set<String>>(emptySet()) }
     var pendingTemplateSaveJob by remember { mutableStateOf<Job?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     val isBatchSelectionMode = selectedAppsForBatch.isNotEmpty()
@@ -219,6 +221,7 @@ fun AppsPage(
             systemUsers = usersDeferred.await()
             config = configRepo.load(systemUsers[targetUserIndex].id)
             sharedUidDeferred.await()
+            sharedUidPackageSet = sharedUidRepo.allSharedUidPackages()
         }
         templates = templateRepo.loadTemplates()
 
@@ -449,6 +452,7 @@ fun AppsPage(
         templates = templates,
         selectedTemplate = selectedTemplateForApply,
         sharedPackages = sharedPackagesForSelectedApp,
+        sharedUidPackages = sharedUidPackageSet,
         selectedBatchCount = selectedAppsForBatch.size,
         bottomInnerPadding = bottomInnerPadding,
     )

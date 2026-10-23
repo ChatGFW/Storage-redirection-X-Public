@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -94,6 +95,7 @@ private val APPS_ITEM_INSIDE_HORIZONTAL_PADDING = 16.dp
 private val APPS_ITEM_CONTENT_GAP = 14.dp
 private val APPS_ARROW_START_SPACING = 12.dp
 private val APPS_SYSTEM_TAG_TOP_SPACING = 4.dp
+private val APPS_TAG_GAP = 4.dp
 private val APPS_TAG_CORNER_RADIUS = 6.dp
 private val APPS_TAG_HORIZONTAL_PADDING = 4.dp
 private val APPS_TAG_VERTICAL_PADDING = 2.dp
@@ -177,6 +179,7 @@ internal fun AppsPageMiuix(
                             drawable = data.icons[app.packageName],
                             isRedirected = redirectedSet.contains(app.packageName),
                             isSystemApp = app.isSystemApp,
+                            isSharedUid = app.packageName in data.sharedUidPackages,
                             isSelected = data.selectedApps.any { it.packageName == app.packageName },
                             modifier = Modifier.testTag("app_item_${app.packageName}"),
                             onClick = { actions.onAppClick(app) },
@@ -568,6 +571,7 @@ private fun AppListItem(
     drawable: Drawable?,
     isRedirected: Boolean,
     isSystemApp: Boolean,
+    isSharedUid: Boolean,
     isSelected: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -637,13 +641,24 @@ private fun AppListItem(
                     maxLines = 1,
                     modifier = Modifier.basicMarquee(),
                 )
-                if (isSystemApp) {
+                if (isSystemApp || isSharedUid) {
                     Spacer(Modifier.height(APPS_SYSTEM_TAG_TOP_SPACING))
-                    StatusTag(
-                        label = stringResource(R.string.apps_system),
-                        backgroundColor = colorScheme.secondaryContainer,
-                        textColor = colorScheme.onSecondaryContainer,
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(APPS_TAG_GAP)) {
+                        if (isSharedUid) {
+                            StatusTag(
+                                label = stringResource(R.string.apps_tag_shared_uid),
+                                backgroundColor = colorScheme.primaryContainer,
+                                textColor = colorScheme.primary,
+                            )
+                        }
+                        if (isSystemApp) {
+                            StatusTag(
+                                label = stringResource(R.string.apps_system),
+                                backgroundColor = colorScheme.secondaryContainer,
+                                textColor = colorScheme.onSecondaryContainer,
+                            )
+                        }
+                    }
                 }
             }
             Image(
