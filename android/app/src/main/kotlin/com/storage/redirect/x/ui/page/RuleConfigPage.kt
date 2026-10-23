@@ -254,6 +254,9 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
             browserRepository = pathBrowserRepo,
             userId = userId,
             packageName = if (route.target == BrowseTarget.MappingCurrentPath) packageName else null,
+            multiSelect = route.target == BrowseTarget.Path && pathDialogIndex == null,
+            allowExclude = route.target == BrowseTarget.Path,
+            isInitiallyExcluded = route.target == BrowseTarget.Path && dialogPathInput.trim().startsWith("!"),
             onBack = {
                 // 恢复对话框 show 状态，弥补离开 composition 时的重置
                 when (route.target) {
@@ -284,7 +287,29 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                     }
                 }
                 browseRoute = null
-            }
+            },
+            onPathsSelect = { paths ->
+                val validPaths = paths.mapNotNull { raw ->
+                    val validation = RedirectConfig.validateAllowedPath(raw)
+                    if (validation is PathValidationResult.Valid) validation.normalized else null
+                }
+                if (validPaths.isEmpty()) {
+                    pathDialogErrorResId = R.string.rule_config_browser_invalid_path
+                    showPathDialog.value = true
+                } else {
+                    var nextConfig = config
+                    for (path in validPaths) {
+                        nextConfig = nextConfig.addAllowedRealPath(packageName, path)
+                    }
+                    saveConfig(nextConfig)
+                    pathDialogErrorResId = null
+                    showPathDialog.value = false
+                    if (validPaths.size < paths.size) {
+                        Toast.makeText(context, R.string.rule_config_paths_partially_invalid, Toast.LENGTH_SHORT).show()
+                    }
+                }
+                browseRoute = null
+            },
         )
         return
     }

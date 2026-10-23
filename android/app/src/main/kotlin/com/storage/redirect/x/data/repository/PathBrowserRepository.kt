@@ -1,5 +1,6 @@
 package com.storage.redirect.x.data.repository
 
+import android.annotation.SuppressLint
 import com.storage.redirect.x.data.model.PathValidationResult
 import com.storage.redirect.x.data.model.RedirectConfig
 import com.storage.redirect.x.data.service.RootService
@@ -14,10 +15,10 @@ class PathBrowserRepository {
         val currentDir = if (normalized.isEmpty()) baseDir else "$baseDir/$normalized"
 
         // -A 列出点前缀目录；仅列目录并保留一层名称，避免文件与额外元信息干扰
-        val command = "ls -1 -A -p '$currentDir' 2>/dev/null"
+        val command = "ls -1 -A -p ${quotePath(currentDir)} 2>/dev/null"
         val result = RootService.runCommand(command)
         if (!result.isSuccess) {
-            return emptyList()
+            return null
         }
 
         return result.stdout
@@ -34,7 +35,8 @@ class PathBrowserRepository {
             .toList()
     }
 
-    // 列出应用私有 sdcard 目录下的子目录
+    // 私有挂载点属于目标用户和包，不能使用调用方的存储目录。
+    @SuppressLint("SdCardPath")
     suspend fun listAppPrivateDirectories(
         userId: Int,
         packageName: String,
@@ -44,9 +46,9 @@ class PathBrowserRepository {
         val baseDir = "/storage/emulated/$userId/Android/data/$packageName/sdcard"
         val currentDir = if (normalized.isEmpty()) baseDir else "$baseDir/$normalized"
 
-        val command = "ls -1 -A -p '$currentDir' 2>/dev/null"
+        val command = "ls -1 -A -p ${quotePath(currentDir)} 2>/dev/null"
         val result = RootService.runCommand(command)
-        if (!result.isSuccess) return emptyList()
+        if (!result.isSuccess) return null
 
         return result.stdout
             .lineSequence()
@@ -70,11 +72,13 @@ class PathBrowserRepository {
         }
     }
 
-    // 不含 Android 前缀检查的简易路径规范化
+    private fun quotePath(path: String): String = "'" + path.replace("'", "'\\''") + "'"
+
+    // 私有路径仅拒绝独立的遍历段，不误拒绝名称中的连续点。
     private fun normalizeSimpleRelativePath(raw: String): String? {
         if (raw.isBlank()) return ""
         val trimmed = raw.trim().trimEnd('/')
-        if (trimmed.startsWith("/") || trimmed.contains("..")) return null
+        if (trimmed.startsWith("/") || trimmed.split('/').any { it == "." || it == ".." }) return null
         return trimmed
     }
 }

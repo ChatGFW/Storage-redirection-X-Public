@@ -205,6 +205,7 @@
     <string name="rule_config_shared_uid_title">共享 UID</string>
     <string name="rule_config_shared_uid_hint">此应用与以下应用共享 UID，开关或配置任一应用将同步影响所有关联应用：</string>
     <string name="rule_config_save_failed">保存失败</string>
+    <string name="rule_config_paths_partially_invalid">部分所选路径无效，已跳过</string>
     <string name="rule_config_error_empty">路径不能为空</string>
     <string name="rule_config_error_absolute">路径必须为相对路径（不能以 / 开头）</string>
     <string name="rule_config_error_traversal">路径不能包含 ..</string>
@@ -325,4 +326,36 @@
     <string name="permission_granted">已授权</string>
     <string name="permission_checking">检查中…</string>
     <string name="permission_retry">重试</string>
+    <!-- 目录选择器 -->
+    <string name="browser_allow_hint">添加允许访问的目录</string>
+    <string name="browser_exclude_hint">排除不需要访问的目录</string>
+    <string name="browser_location_hint">选择路径映射的位置</string>
+    <string name="browser_back">返回上一级或退出</string>
+    <string name="browser_settings">浏览设置</string>
+    <string name="browser_storage">内部存储</string>
+    <string name="browser_private_storage">应用私有目录</string>
+    <string name="browser_full_path">查看完整路径</string>
+    <string name="browser_search">搜索当前目录</string>
+    <string name="browser_clear_search">清除搜索</string>
+    <string name="browser_directory_count">文件夹 · %1$d</string>
+    <string name="browser_sort_ascending">名称升序</string>
+    <string name="browser_sort_descending">名称降序</string>
+    <string name="browser_sort">切换目录排序</string>
+    <string name="browser_no_results">没有找到匹配的目录</string>
+    <string name="browser_deselect_current">取消选择此目录</string>
+    <string name="browser_folder">文件夹</string>
+    <string name="browser_restricted">受限目录</string>
+    <string name="browser_select_directory">选择 %1$s</string>
+    <string name="browser_selected_count">已选 %1$d 项</string>
+    <string name="browser_cross_directory">支持跨目录选择</string>
+    <string name="browser_current_location">当前位置</string>
+    <string name="browser_enter_directory">请先进入一个目录</string>
+    <string name="browser_exclude_selected">排除所选目录 · %1$d</string>
+    <string name="browser_add_selected">添加所选目录 · %1$d</string>
+    <string name="browser_allow_access">允许访问</string>
+    <string name="browser_exclude_directory">排除目录</string>
+    <string name="browser_clear_selection">清空选择</string>
+    <string name="browser_show_hidden">显示隐藏目录</string>
+    <string name="browser_no_selection">还没有选择目录</string>
+    <string name="browser_remove_directory">移除 %1$s</string>
 </resources>
