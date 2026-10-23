@@ -9,7 +9,11 @@ val releaseKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")?.takeIf { it.is
 
 android {
     namespace = "com.storage.redirect.x"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 0
+        }
+    }
 
     defaultConfig {
         applicationId = "com.storage.redirect.x"
