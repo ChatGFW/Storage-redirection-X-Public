@@ -7,6 +7,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,10 +16,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.RadioButtonChecked
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -28,22 +37,30 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.R
 import com.storage.redirect.x.data.model.PathValidationResult
 import com.storage.redirect.x.data.model.RedirectConfig
+import com.storage.redirect.x.data.model.RedirectTemplate
 import com.storage.redirect.x.data.model.StoragePathMapping
 import com.storage.redirect.x.data.repository.ConfigRepository
 import com.storage.redirect.x.data.repository.PathBrowserRepository
 import com.storage.redirect.x.data.repository.SharedUidRepository
+import com.storage.redirect.x.data.repository.TemplateApplyMode
 import com.storage.redirect.x.data.repository.TemplateRepository
 import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
 import com.storage.redirect.x.ui.component.SrxSmallTopAppBar
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
@@ -62,6 +79,7 @@ import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.Backup
 import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.Paste
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 // 页面间距：列表横向边距，区块间距，行内边距，弹窗字段间距与提示卡片间距
@@ -95,6 +113,8 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
     var sharedPackages by remember { mutableStateOf<List<String>>(emptyList()) }
     var hasModified by remember { mutableStateOf(false) }
     var pendingSaveJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    // 保存锁覆盖完整 I/O，旧任务取消后新写入仍须等待旧写入结束。
+    val saveMutex = remember { Mutex() }
 
     // 路径弹窗状态（null = 添加，非 null = 编辑对应索引）
     val showPathDialog = remember { mutableStateOf(false) }
@@ -117,6 +137,15 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
     val showSaveTemplateDialog = remember { mutableStateOf(false) }
     var saveTemplateNameInput by remember { mutableStateOf("") }
     var saveTemplateNameError by remember { mutableStateOf(false) }
+
+    // 模板选择、应用方式与共享 UID 确认状态
+    var templates by remember { mutableStateOf<List<RedirectTemplate>>(emptyList()) }
+    val showTemplatePicker = remember { mutableStateOf(false) }
+    var pickerSelectedId by remember { mutableStateOf<String?>(null) }
+    val showApplyModeDialog = remember { mutableStateOf(false) }
+    var selectedTemplate by remember { mutableStateOf<RedirectTemplate?>(null) }
+    var pendingApplyMode by remember { mutableStateOf<TemplateApplyMode?>(null) }
+    val showSharedUidApplyDialog = remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         sharedUidRepo.load()
@@ -155,8 +184,53 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
         // 取消上一次未完成的保存，避免快速切换时旧配置覆盖新配置
         pendingSaveJob?.cancel()
         pendingSaveJob = scope.launch {
-            configRepo.saveAppConfigs(finalConfig, affectedPackages)
+            saveMutex.withLock {
+                configRepo.saveAppConfigs(finalConfig, affectedPackages)
+            }
         }
+    }
+
+    fun clearTemplateSelection() {
+        showTemplatePicker.value = false
+        showApplyModeDialog.value = false
+        showSharedUidApplyDialog.value = false
+        templates = emptyList()
+        pickerSelectedId = null
+        selectedTemplate = null
+        pendingApplyMode = null
+    }
+
+    fun applyTemplateToCurrent(template: RedirectTemplate, mode: TemplateApplyMode) {
+        val result = templateRepo.applyTemplate(config, packageName, sharedPackages, template, mode)
+        clearTemplateSelection()
+        val previousConfig = config
+        val previousHasModified = hasModified
+        config = result.config
+        hasModified = true
+        pendingSaveJob?.cancel()
+        pendingSaveJob = scope.launch {
+            val isSaved = saveMutex.withLock {
+                configRepo.saveAppConfigs(result.config, result.affectedPackages)
+            }
+            if (!isSaved) {
+                config = previousConfig
+                hasModified = previousHasModified
+            }
+            Toast.makeText(
+                context,
+                if (isSaved) R.string.apps_template_apply_success else R.string.rule_config_save_failed,
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    fun requestApplyTemplate(template: RedirectTemplate, mode: TemplateApplyMode) {
+        if (sharedPackages.isNotEmpty()) {
+            pendingApplyMode = mode
+            showSharedUidApplyDialog.value = true
+            return
+        }
+        applyTemplateToCurrent(template, mode)
     }
 
     val appConfig = config.getAppConfig(packageName)
@@ -228,6 +302,22 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = {
+                            clearTemplateSelection()
+                            templates = templateRepo.loadTemplates()
+                            showTemplatePicker.value = true
+                        },
+                        enabled = !isLoading,
+                        modifier = Modifier
+                            .padding(end = RULE_CONFIG_ITEM_SPACING)
+                            .testTag("rule_config_apply_template"),
+                    ) {
+                        Icon(
+                            MiuixIcons.Paste,
+                            contentDescription = stringResource(R.string.apps_apply_template),
+                        )
+                    }
                     IconButton(
                         onClick = {
                             if (allowedPaths.isEmpty() && pathMappings.isEmpty()) {
@@ -720,6 +810,165 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
         )
     }
 
+    WindowDialog(
+        show = showTemplatePicker.value,
+        title = stringResource(R.string.apps_apply_template),
+        onDismissRequest = { clearTemplateSelection() },
+    ) {
+        Column(
+            modifier = Modifier
+                .semantics { testTagsAsResourceId = true }
+                .testTag("rule_config_template_picker"),
+        ) {
+            if (templates.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.apps_template_empty),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+                Spacer(Modifier.height(RULE_CONFIG_DIALOG_BOTTOM_SPACING))
+                TextButton(
+                    text = stringResource(R.string.common_cancel),
+                    onClick = { clearTemplateSelection() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("rule_config_template_picker_cancel"),
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp),
+                ) {
+                    items(templates, key = { it.id }) { template ->
+                        TemplatePickerOption(
+                            name = template.name,
+                            isPicked = pickerSelectedId == template.id,
+                            testTag = "rule_config_template_picker_item",
+                            onClick = { pickerSelectedId = template.id },
+                        )
+                    }
+                }
+                Spacer(Modifier.height(RULE_CONFIG_DIALOG_BOTTOM_SPACING))
+                Row {
+                    TextButton(
+                        text = stringResource(R.string.common_cancel),
+                        onClick = { clearTemplateSelection() },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("rule_config_template_picker_cancel"),
+                    )
+                    Spacer(Modifier.width(RULE_CONFIG_DIALOG_BUTTON_SPACING))
+                    TextButton(
+                        text = stringResource(R.string.common_ok),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                        enabled = pickerSelectedId != null,
+                        onClick = {
+                            val template = templates.firstOrNull { it.id == pickerSelectedId } ?: return@TextButton
+                            showTemplatePicker.value = false
+                            pickerSelectedId = null
+                            selectedTemplate = template
+                            showApplyModeDialog.value = true
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("rule_config_template_picker_confirm"),
+                    )
+                }
+            }
+        }
+    }
+
+    WindowDialog(
+        show = showApplyModeDialog.value,
+        title = stringResource(R.string.apps_template_apply_mode_title),
+        summary = stringResource(
+            R.string.apps_template_apply_mode_summary,
+            selectedTemplate?.name ?: "",
+            decodedAppName,
+        ),
+        onDismissRequest = { clearTemplateSelection() },
+    ) {
+        Column(
+            modifier = Modifier
+                .semantics { testTagsAsResourceId = true }
+                .testTag("rule_config_apply_mode_dialog"),
+        ) {
+            Row {
+                TextButton(
+                    text = stringResource(R.string.apps_template_apply_merge),
+                    onClick = {
+                        val template = selectedTemplate ?: return@TextButton
+                        showApplyModeDialog.value = false
+                        requestApplyTemplate(template, TemplateApplyMode.Merge)
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("rule_config_apply_mode_merge"),
+                )
+                Spacer(Modifier.width(RULE_CONFIG_DIALOG_BUTTON_SPACING))
+                TextButton(
+                    text = stringResource(R.string.apps_template_apply_replace),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    onClick = {
+                        val template = selectedTemplate ?: return@TextButton
+                        showApplyModeDialog.value = false
+                        requestApplyTemplate(template, TemplateApplyMode.Replace)
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("rule_config_apply_mode_replace"),
+                )
+            }
+        }
+    }
+
+    WindowDialog(
+        show = showSharedUidApplyDialog.value,
+        title = stringResource(R.string.apps_template_shared_uid_confirm_title),
+        summary = stringResource(R.string.apps_template_shared_uid_confirm_summary),
+        onDismissRequest = { clearTemplateSelection() },
+    ) {
+        Column(
+            modifier = Modifier
+                .semantics { testTagsAsResourceId = true }
+                .testTag("rule_config_shared_uid_dialog"),
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 240.dp),
+            ) {
+                items(sharedPackages) { pkg ->
+                    Text(
+                        text = pkg,
+                        modifier = Modifier.padding(vertical = 2.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(RULE_CONFIG_DIALOG_BOTTOM_SPACING))
+            Row {
+                TextButton(
+                    text = stringResource(R.string.common_cancel),
+                    onClick = { clearTemplateSelection() },
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("rule_config_shared_uid_cancel"),
+                )
+                Spacer(Modifier.width(RULE_CONFIG_DIALOG_BUTTON_SPACING))
+                TextButton(
+                    text = stringResource(R.string.common_ok),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    onClick = {
+                        val template = selectedTemplate ?: return@TextButton
+                        val mode = pendingApplyMode ?: return@TextButton
+                        applyTemplateToCurrent(template, mode)
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("rule_config_shared_uid_ok"),
+                )
+            }
+        }
+    }
+
     // 删除确认弹窗（合并路径/映射）
     val isDeletePath = deleteTarget is DeleteTarget.Path
     WindowDialog(
@@ -824,6 +1073,42 @@ private enum class BrowseTarget {
 private data class PathBrowseRoute(
     val target: BrowseTarget,
 )
+
+// 模板选择条目
+@Composable
+private fun TemplatePickerOption(
+    name: String,
+    isPicked: Boolean,
+    testTag: String,
+    onClick: () -> Unit,
+) {
+    val colorScheme = MiuixTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .then(if (isPicked) Modifier.background(colorScheme.primaryContainer) else Modifier)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .testTag(testTag),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = if (isPicked) Icons.Rounded.RadioButtonChecked else Icons.Rounded.RadioButtonUnchecked,
+            contentDescription = null,
+            tint = if (isPicked) colorScheme.primary else colorScheme.onSurfaceVariantSummary,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = name,
+            style = MiuixTheme.textStyles.body1,
+            color = colorScheme.onSurface,
+            fontWeight = if (isPicked) FontWeight(600) else FontWeight(500),
+        )
+    }
+    Spacer(Modifier.height(RULE_CONFIG_ITEM_SPACING))
+}
 
 // 弹窗按钮行
 @Composable
