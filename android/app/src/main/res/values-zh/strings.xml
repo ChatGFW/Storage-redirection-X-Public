@@ -155,7 +155,7 @@
     <string name="apps_template_apply_merge">合并</string>
     <string name="apps_template_apply_replace">覆盖</string>
     <string name="apps_template_shared_uid_confirm_title">同步共享 UID 应用？</string>
-    <string name="apps_template_shared_uid_confirm_summary">此应用与以下应用共享 UID，模板将同步应用到它们；取消则不应用模板：\n%1$s</string>
+    <string name="apps_template_shared_uid_confirm_summary">此应用与以下应用共享 UID，模板将同步应用到它们；取消则不应用模板：</string>
     <string name="apps_template_apply_success">模板已应用</string>
     <string name="apps_template_save_failed_empty">当前应用没有可保存的规则</string>
     <string name="apps_selected">已选择</string>

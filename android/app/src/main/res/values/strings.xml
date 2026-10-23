@@ -155,7 +155,7 @@
     <string name="apps_template_apply_merge">Merge</string>
     <string name="apps_template_apply_replace">Replace</string>
     <string name="apps_template_shared_uid_confirm_title">Sync shared UID apps?</string>
-    <string name="apps_template_shared_uid_confirm_summary">This app shares UID with the following apps. The template will be applied to them too; cancel means no template will be applied:\n%1$s</string>
+    <string name="apps_template_shared_uid_confirm_summary">This app shares UID with the following apps. The template will be applied to them too; cancel means no template will be applied:</string>
     <string name="apps_template_apply_success">Template applied</string>
     <string name="apps_template_save_failed_empty">Current app has no rules to save</string>
     <string name="apps_selected">Selected</string>

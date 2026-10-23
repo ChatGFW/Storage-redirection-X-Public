@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -487,7 +489,24 @@ private fun AppMaterialDialogs(
         AlertDialog(
             onDismissRequest = onDismissSharedConfirm,
             title = { Text(stringResource(R.string.apps_template_shared_uid_confirm_title)) },
-            text = { Text(stringResource(R.string.apps_template_shared_uid_confirm_summary, sharedPackages.joinToString("\n"))) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.apps_template_shared_uid_confirm_summary))
+                    // 包名多时对话框超高会把按钮挤出屏幕，列表限制高度可滚动
+                    LazyColumn(
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .heightIn(max = 240.dp),
+                    ) {
+                        items(sharedPackages) { pkg ->
+                            Text(
+                                text = pkg,
+                                modifier = Modifier.padding(vertical = 2.dp),
+                            )
+                        }
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(onClick = onConfirmSharedApply) { Text(stringResource(R.string.common_ok)) }
             },

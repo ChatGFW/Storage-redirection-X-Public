@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -376,7 +377,7 @@ private fun AppTemplateDialogs(
     WindowDialog(
         show = dialogs.showSharedUidConfirmDialog.value,
         title = stringResource(R.string.apps_template_shared_uid_confirm_title),
-        summary = stringResource(R.string.apps_template_shared_uid_confirm_summary, data.sharedPackages.joinToString("\n")),
+        summary = stringResource(R.string.apps_template_shared_uid_confirm_summary),
         onDismissRequest = actions.onDismissSharedConfirm,
     ) {
         Column(
@@ -384,6 +385,19 @@ private fun AppTemplateDialogs(
                 .semantics { testTagsAsResourceId = true }
                 .testTag("apps_template_shared_uid_dialog"),
         ) {
+            // 包名多时对话框超高会把按钮挤出屏幕，列表限制高度可滚动
+            LazyColumn(
+                modifier = Modifier
+                    .padding(bottom = 12.dp)
+                    .heightIn(max = 240.dp),
+            ) {
+                items(data.sharedPackages) { pkg ->
+                    Text(
+                        text = pkg,
+                        modifier = Modifier.padding(vertical = 2.dp),
+                    )
+                }
+            }
             Row {
                 TextButton(
                     text = stringResource(R.string.common_cancel),
