@@ -21,6 +21,7 @@ android {
         targetSdk = 37
         versionCode = appVersionCode.toInt()
         versionName = appVersionName
+        buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
@@ -50,6 +51,9 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
+            // MIUI 会拦截 debuggable 包的 PKMS 应用枚举，关掉以保持列表可用
+            isDebuggable = false
         }
         release {
             isMinifyEnabled = true
