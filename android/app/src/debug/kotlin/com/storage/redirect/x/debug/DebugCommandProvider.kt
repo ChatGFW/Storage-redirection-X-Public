@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Binder
 import android.os.Bundle
 import android.os.Process
+import com.storage.redirect.x.data.cache.AppPreferences
 
 // Debug 包专用的指令入口，仅授权 shell / root / 自身进程调用
 class DebugCommandProvider : ContentProvider() {
@@ -23,6 +24,8 @@ class DebugCommandProvider : ContentProvider() {
         }
         val context = context
             ?: return debugResult(isOk = false, message = "Context is not ready", command = method, target = arg)
+        // provider 进程可能先于 MainActivity 初始化，确保 prefs 可用（init 幂等）
+        AppPreferences.init(context)
 
         return when (method) {
             METHOD_PAGE_OPEN -> context.openDebugPage(arg)
