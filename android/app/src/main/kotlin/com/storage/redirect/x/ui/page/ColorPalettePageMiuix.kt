@@ -24,16 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AspectRatio
-import androidx.compose.material.icons.rounded.BlurOn
-import androidx.compose.material.icons.rounded.CallToAction
-import androidx.compose.material.icons.rounded.Colorize
-import androidx.compose.material.icons.rounded.DesignServices
-import androidx.compose.material.icons.rounded.RoundedCorner
-import androidx.compose.material.icons.rounded.Style
-import androidx.compose.material.icons.rounded.Wallpaper
-import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -55,6 +45,7 @@ import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.ui.component.bottombar.BottomBarAppearanceState
 import com.storage.redirect.x.ui.component.miuix.ScaleDialog
 import com.storage.redirect.x.ui.theme.AppThemeSettings
@@ -73,8 +64,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
@@ -107,7 +96,7 @@ fun ColorPalettePageMiuix(
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(
-                                imageVector = MiuixIcons.Back,
+                                imageVector = AppIcons.Back,
                                 contentDescription = null,
                                 tint = colorScheme.onBackground,
                             )
@@ -164,7 +153,7 @@ fun ColorPalettePageMiuix(
                             title = stringResource(R.string.settings_monet),
                             startAction = {
                                 Icon(
-                                    Icons.Rounded.Wallpaper,
+                                    AppIcons.ColorFilter,
                                     modifier = Modifier.padding(end = 6.dp),
                                     contentDescription = null,
                                     tint = colorScheme.onBackground,
@@ -183,7 +172,7 @@ fun ColorPalettePageMiuix(
                                     items = colorItems,
                                     startAction = {
                                         Icon(
-                                            Icons.Rounded.Colorize,
+                                            AppIcons.ColorPicker,
                                             modifier = Modifier.padding(end = 6.dp),
                                             contentDescription = null,
                                             tint = colorScheme.onBackground,
@@ -203,7 +192,7 @@ fun ColorPalettePageMiuix(
                                             items = styles.map { it.name },
                                             startAction = {
                                                 Icon(
-                                                    Icons.Rounded.Style,
+                                                    AppIcons.PaletteStyle,
                                                     modifier = Modifier.padding(end = 6.dp),
                                                     contentDescription = null,
                                                     tint = colorScheme.onBackground,
@@ -221,7 +210,7 @@ fun ColorPalettePageMiuix(
                                             items = specs.map { it.name },
                                             startAction = {
                                                 Icon(
-                                                    Icons.Rounded.DesignServices,
+                                                    AppIcons.Brush,
                                                     modifier = Modifier.padding(end = 6.dp),
                                                     contentDescription = null,
                                                     tint = colorScheme.onBackground,
@@ -249,7 +238,7 @@ fun ColorPalettePageMiuix(
                                 summary = stringResource(R.string.settings_enable_blur_summary),
                                 startAction = {
                                     Icon(
-                                        Icons.Rounded.BlurOn,
+                                        AppIcons.Shadow,
                                         modifier = Modifier.padding(end = 6.dp),
                                         contentDescription = null,
                                         tint = colorScheme.onBackground,
@@ -264,7 +253,7 @@ fun ColorPalettePageMiuix(
                             summary = stringResource(R.string.settings_floating_bottom_bar_summary),
                             startAction = {
                                 Icon(
-                                    Icons.Rounded.CallToAction,
+                                    AppIcons.LayoutBottom,
                                     modifier = Modifier.padding(end = 6.dp),
                                     contentDescription = null,
                                     tint = colorScheme.onBackground,
@@ -281,7 +270,7 @@ fun ColorPalettePageMiuix(
                                 summary = stringResource(R.string.settings_floating_bottom_bar_blur_summary),
                                 startAction = {
                                     Icon(
-                                        Icons.Rounded.WaterDrop,
+                                        AppIcons.Drop,
                                         modifier = Modifier.padding(end = 6.dp),
                                         contentDescription = null,
                                         tint = colorScheme.onBackground,
@@ -307,7 +296,7 @@ fun ColorPalettePageMiuix(
                             summary = stringResource(R.string.settings_page_scale_summary),
                             startAction = {
                                 Icon(
-                                    Icons.Rounded.AspectRatio,
+                                    AppIcons.AspectRatio,
                                     modifier = Modifier.padding(end = 6.dp),
                                     contentDescription = null,
                                     tint = colorScheme.onBackground,

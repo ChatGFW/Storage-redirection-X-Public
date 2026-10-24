@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import android.content.Intent
 import androidx.core.net.toUri
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -24,8 +25,6 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
 
 // 开源组件信息
 data class OpenSourceLibrary(
@@ -42,9 +41,9 @@ private val androidLibraries = listOf(
         url = "https://developer.android.com/jetpack/compose"
     ),
     OpenSourceLibrary(
-        name = "Compose Material Icons",
+        name = "MingCute Icons",
         license = "Apache 2.0",
-        url = "https://developer.android.com/jetpack/compose"
+        url = "https://github.com/mingcute-design/mingcute-icons"
     ),
     OpenSourceLibrary(
         name = "AndroidX Core KTX",
@@ -140,7 +139,7 @@ fun OpenSourceLicensesPage(onBack: () -> Unit) {
             scrollBehavior = scrollBehavior,
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(MiuixIcons.Back, contentDescription = stringResource(R.string.common_close))
+                    Icon(AppIcons.Back, contentDescription = stringResource(R.string.common_close))
                 }
             }
         )

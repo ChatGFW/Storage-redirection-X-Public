@@ -6,9 +6,6 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.FileUpload
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.data.repository.LogRepository
 import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
 import com.storage.redirect.x.ui.component.SrxTopAppBar
@@ -59,9 +57,6 @@ import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.SearchBar
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private const val LOG_LINE_COUNT = 500
@@ -139,7 +134,7 @@ fun LogsPage(onBack: (() -> Unit)? = null) {
                         onClick = onBack,
                         modifier = Modifier.padding(start = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
                     ) {
-                        Icon(MiuixIcons.Back, contentDescription = stringResource(R.string.common_close))
+                        Icon(AppIcons.Back, contentDescription = stringResource(R.string.common_close))
                     }
                 },
                 actions = {
@@ -149,13 +144,13 @@ fun LogsPage(onBack: (() -> Unit)? = null) {
                             exportLauncher.launch(fileName)
                         },
                     ) {
-                        Icon(Icons.Rounded.FileUpload, contentDescription = stringResource(R.string.logs_export))
+                        Icon(AppIcons.Export, contentDescription = stringResource(R.string.logs_export))
                     }
                     IconButton(
                         onClick = { loadLogs() },
                         modifier = Modifier.padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
                     ) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.logs_refresh))
+                        Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.logs_refresh))
                     }
                 }
             )
@@ -169,13 +164,13 @@ fun LogsPage(onBack: (() -> Unit)? = null) {
                             exportLauncher.launch(fileName)
                         },
                     ) {
-                        Icon(Icons.Rounded.FileUpload, contentDescription = stringResource(R.string.logs_export))
+                        Icon(AppIcons.Export, contentDescription = stringResource(R.string.logs_export))
                     }
                     IconButton(
                         onClick = { loadLogs() },
                         modifier = Modifier.padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
                     ) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.logs_refresh))
+                        Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.logs_refresh))
                     }
                 }
             )

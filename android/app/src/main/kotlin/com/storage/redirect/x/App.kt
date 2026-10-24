@@ -18,11 +18,6 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -55,6 +50,7 @@ import com.storage.redirect.x.ui.component.bottombar.AppNavigationBar
 import com.storage.redirect.x.ui.component.bottombar.BottomBarAppearanceState
 import com.storage.redirect.x.ui.component.bottombar.FloatingBottomBar
 import com.storage.redirect.x.ui.component.bottombar.FloatingBottomBarTab
+import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.ui.navigation.rememberRootNavigationState
 import com.storage.redirect.x.ui.page.AppsPage
 import com.storage.redirect.x.ui.page.FileMonitorPage
@@ -167,10 +163,10 @@ fun App(
         val navKeys = listOf("home", "apps", "monitor", "settings")
         val navIcons = remember {
             listOf(
-                Icons.Rounded.Home,
-                Icons.Rounded.Apps,
-                Icons.Rounded.Folder,
-                Icons.Rounded.Settings,
+                AppIcons.Home,
+                AppIcons.Grid,
+                AppIcons.Eye,
+                AppIcons.Settings,
             )
         }
         val navLabels = listOf(

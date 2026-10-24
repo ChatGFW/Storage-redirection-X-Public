@@ -24,9 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.RadioButtonChecked
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -47,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.data.model.PathValidationResult
 import com.storage.redirect.x.data.model.RedirectConfig
 import com.storage.redirect.x.data.model.RedirectTemplate
@@ -72,14 +70,6 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.window.WindowDialog
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Add
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Delete
-import top.yukonga.miuix.kmp.icon.extended.Edit
-import top.yukonga.miuix.kmp.icon.extended.Backup
-import top.yukonga.miuix.kmp.icon.extended.Info
-import top.yukonga.miuix.kmp.icon.extended.Paste
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 // 页面间距：列表横向边距，区块间距，行内边距，弹窗字段间距与提示卡片间距
@@ -323,7 +313,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                         onClick = { onBack(hasModified) },
                         modifier = Modifier.padding(start = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
                     ) {
-                        Icon(MiuixIcons.Back, contentDescription = null)
+                        Icon(AppIcons.Back, contentDescription = null)
                     }
                 },
                 actions = {
@@ -339,7 +329,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                             .testTag("rule_config_apply_template"),
                     ) {
                         Icon(
-                            MiuixIcons.Paste,
+                            AppIcons.Paste,
                             contentDescription = stringResource(R.string.apps_apply_template),
                         )
                     }
@@ -358,7 +348,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                             .testTag("rule_config_save_as_template"),
                     ) {
                         Icon(
-                            MiuixIcons.Backup,
+                            AppIcons.Save,
                             contentDescription = stringResource(R.string.apps_save_as_template),
                         )
                     }
@@ -494,14 +484,14 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                                     pathDialogErrorResId = null
                                     showPathDialog.value = true
                                 }) {
-                                    Icon(MiuixIcons.Edit, contentDescription = stringResource(R.string.common_edit))
+                                    Icon(AppIcons.Edit, contentDescription = stringResource(R.string.common_edit))
                                 }
                                 IconButton(onClick = {
                                     deleteTarget = DeleteTarget.Path(index)
                                     showDeleteDialog.value = true
                                 }) {
                                     Icon(
-                                        MiuixIcons.Delete,
+                                        AppIcons.Delete,
                                         contentDescription = stringResource(R.string.common_delete),
                                         tint = MiuixTheme.colorScheme.error
                                     )
@@ -562,14 +552,14 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                                     mappingDialogErrorResId = null
                                     showMappingDialog.value = true
                                 }) {
-                                    Icon(MiuixIcons.Edit, contentDescription = stringResource(R.string.common_edit))
+                                    Icon(AppIcons.Edit, contentDescription = stringResource(R.string.common_edit))
                                 }
                                 IconButton(onClick = {
                                     deleteTarget = DeleteTarget.Mapping(index)
                                     showDeleteDialog.value = true
                                 }) {
                                     Icon(
-                                        MiuixIcons.Delete,
+                                        AppIcons.Delete,
                                         contentDescription = stringResource(R.string.common_delete),
                                         tint = MiuixTheme.colorScheme.error
                                     )
@@ -1048,7 +1038,7 @@ private fun SectionHeader(title: String, onAdd: () -> Unit, onInfo: (() -> Unit)
         onInfo?.let {
             IconButton(onClick = it) {
                 Icon(
-                    MiuixIcons.Info,
+                    AppIcons.Info,
                     contentDescription = stringResource(R.string.rule_config_allowed_paths_rule_hint_desc),
                     tint = MiuixTheme.colorScheme.primary
                 )
@@ -1056,7 +1046,7 @@ private fun SectionHeader(title: String, onAdd: () -> Unit, onInfo: (() -> Unit)
         }
         IconButton(onClick = onAdd) {
             Icon(
-                MiuixIcons.Add,
+                AppIcons.Add,
                 contentDescription = stringResource(R.string.common_add),
                 tint = MiuixTheme.colorScheme.primary
             )
@@ -1119,7 +1109,7 @@ private fun TemplatePickerOption(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = if (isPicked) Icons.Rounded.RadioButtonChecked else Icons.Rounded.RadioButtonUnchecked,
+            imageVector = if (isPicked) AppIcons.RadioOn else AppIcons.RadioOff,
             contentDescription = null,
             tint = if (isPicked) colorScheme.primary else colorScheme.onSurfaceVariantSummary,
             modifier = Modifier.size(20.dp),

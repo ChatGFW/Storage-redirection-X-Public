@@ -15,13 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.rounded.Sort
-import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.FolderOpen
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -34,9 +27,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.icon.AppIcons
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
@@ -63,7 +58,7 @@ internal fun BrowserDirectoryList(state: PathBrowserState, modifier: Modifier = 
                     color = browserColors().summary, fontSize = 12.sp,
                 )
                 IconButton(onClick = { state.isDescending = !state.isDescending }) {
-                    Icon(Icons.AutoMirrored.Rounded.Sort, stringResource(R.string.browser_sort), tint = browserColors().summary)
+                    Icon(AppIcons.Sort, stringResource(R.string.browser_sort), tint = browserColors().summary)
                 }
             }
         }
@@ -92,7 +87,7 @@ private fun BrowserEmptyState(state: PathBrowserState) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(Icons.Rounded.FolderOpen, null, Modifier.size(40.dp), tint = browserColors().summary)
+        Icon(AppIcons.FolderOpen, null, Modifier.size(40.dp), tint = browserColors().summary)
         BrowserText(
             stringResource(
                 when {
@@ -133,11 +128,11 @@ private fun DirectorySummary(isEnabled: Boolean) {
 @Composable
 private fun DirectoryTrailing(state: PathBrowserState, path: String) {
     if (!state.canSelect(path)) {
-        Icon(Icons.Rounded.Lock, stringResource(R.string.browser_restricted), Modifier.size(20.dp), tint = browserColors().summary)
+        Icon(AppIcons.Lock, stringResource(R.string.browser_restricted), Modifier.size(20.dp), tint = browserColors().summary)
         return
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, Modifier.size(18.dp), tint = browserColors().summary)
+        Icon(AppIcons.ChevronRight, null, Modifier.size(18.dp), tint = browserColors().summary)
         if (state.multiSelect) {
             BrowserCheckbox(
                 isSelected = path in state.selectedPaths,
@@ -172,7 +167,7 @@ private fun BrowserDirectoryRow(state: PathBrowserState, path: String, index: In
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(Icons.Rounded.Folder, null, Modifier.size(34.dp), tint = colors.folder)
+            Icon(AppIcons.Folder, null, Modifier.size(34.dp), tint = colors.folder)
             Column(Modifier.weight(1f).padding(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 DirectoryTitle(path)
                 DirectorySummary(isEnabled)

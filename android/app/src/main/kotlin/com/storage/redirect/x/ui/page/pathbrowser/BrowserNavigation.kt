@@ -11,15 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -33,6 +24,8 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.R
 import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.icon.AppIcons
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -49,12 +42,12 @@ internal fun BrowserScaffold(
 ) {
     val back: @Composable () -> Unit = {
         IconButton(onClick = onBack, modifier = Modifier.testTag("browser_back")) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.browser_back), tint = browserColors().text)
+            Icon(AppIcons.Back, stringResource(R.string.browser_back), tint = browserColors().text)
         }
     }
     val settings: @Composable () -> Unit = {
         IconButton(onClick = onSettings, modifier = Modifier.testTag("browser_settings")) {
-            Icon(Icons.Rounded.MoreHoriz, stringResource(R.string.browser_settings), tint = browserColors().text)
+            Icon(AppIcons.More, stringResource(R.string.browser_settings), tint = browserColors().text)
         }
     }
     Scaffold(
@@ -78,7 +71,7 @@ internal fun BrowserBreadcrumbs(state: PathBrowserState) {
     ) {
         Row(Modifier.weight(1f).horizontalScroll(scrollState), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { state.navigateTo("") }, modifier = Modifier.testTag("browser_root")) {
-                Icon(Icons.Rounded.Home, stringResource(R.string.browser_storage), tint = browserColors().summary)
+                Icon(AppIcons.Phone, stringResource(R.string.browser_storage), tint = browserColors().summary)
             }
             BreadcrumbButton(
                 text = stringResource(if (state.packageName == null) R.string.browser_storage else R.string.browser_private_storage),
@@ -86,7 +79,7 @@ internal fun BrowserBreadcrumbs(state: PathBrowserState) {
             )
             parts.forEachIndexed { index, name ->
                 Icon(
-                    Icons.AutoMirrored.Rounded.KeyboardArrowRight, null,
+                    AppIcons.ChevronRight, null,
                     modifier = Modifier.size(16.dp), tint = browserColors().summary,
                 )
                 BreadcrumbButton(name) { state.navigateTo(parts.take(index + 1).joinToString("/")) }
@@ -96,7 +89,7 @@ internal fun BrowserBreadcrumbs(state: PathBrowserState) {
             onClick = { state.dialog = BrowserDialog.Location },
             modifier = Modifier.testTag("browser_full_path"),
         ) {
-            Icon(Icons.Rounded.Info, stringResource(R.string.browser_full_path), tint = browserColors().summary)
+            Icon(AppIcons.Info, stringResource(R.string.browser_full_path), tint = browserColors().summary)
         }
     }
 }
@@ -118,12 +111,12 @@ internal fun BrowserSearch(query: String, onQueryChange: (String) -> Unit) {
     val focus = LocalFocusManager.current
     val placeholder = stringResource(R.string.browser_search)
     val leading: @Composable () -> Unit = {
-        Icon(Icons.Rounded.Search, null, Modifier.padding(horizontal = 12.dp), tint = browserColors().summary)
+        Icon(AppIcons.Search, null, Modifier.padding(horizontal = 12.dp), tint = browserColors().summary)
     }
     val trailing: @Composable () -> Unit = {
         if (query.isNotEmpty()) {
             IconButton(onClick = { onQueryChange("") }) {
-                Icon(Icons.Rounded.Close, stringResource(R.string.browser_clear_search), tint = browserColors().summary)
+                Icon(AppIcons.Close, stringResource(R.string.browser_clear_search), tint = browserColors().summary)
             }
         }
     }

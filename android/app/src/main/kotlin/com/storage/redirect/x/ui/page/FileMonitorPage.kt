@@ -1,10 +1,6 @@
 package com.storage.redirect.x.ui.page
 
 import android.graphics.drawable.Drawable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +51,7 @@ import com.storage.redirect.x.data.model.MonitorResultState
 import com.storage.redirect.x.data.model.MonitorWriterType
 import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
 import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.icon.AppIcons
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
@@ -166,7 +163,7 @@ fun FileMonitorPage(
                     onClick = { monitorViewModel.refresh() },
                     modifier = Modifier.padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
                 ) {
-                    Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.file_monitor_refresh))
+                    Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.file_monitor_refresh))
                 }
             }
         )
@@ -340,7 +337,7 @@ private fun MonitorEntryCard(
                         modifier = Modifier.size(20.dp),
                     ) {
                         Icon(
-                            imageVector = if (isExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                            imageVector = if (isExpanded) AppIcons.ChevronUp else AppIcons.ChevronDown,
                             contentDescription = stringResource(
                                 if (isExpanded) R.string.file_monitor_collapse else R.string.file_monitor_expand
                             ),

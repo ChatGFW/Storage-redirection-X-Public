@@ -71,15 +71,19 @@ Android/Kotlin direct dependencies:
 
 - Android Gradle Plugin: Apache-2.0.
 - Kotlin Gradle plugin and Compose compiler/plugin: Apache-2.0.
-- AndroidX Core, Activity, Lifecycle, Compose UI, Compose Foundation, Compose Material Icons, and Material 3: Apache-2.0.
+- AndroidX Core, Activity, Lifecycle, Compose UI, Compose Foundation, and Material 3: Apache-2.0.
 - Material Kolor: MIT, https://github.com/jordond/materialkolor.
-- Miuix UI, icons, preference, and blur modules: Apache-2.0, https://github.com/compose-miuix-ui/miuix.
+- Miuix UI, preference, and blur modules: Apache-2.0, https://github.com/compose-miuix-ui/miuix.
 - kotlinx.coroutines: Apache-2.0.
 - Gson: Apache-2.0.
 - HiddenApiBypass: Apache-2.0, https://github.com/LSPosed/AndroidHiddenApiBypass.
 - Backdrop: Apache-2.0.
 - Capsule: Apache-2.0.
 - JUnit 4: EPL-1.0.
+
+Bundled icon assets:
+
+- MingCute Icons: Apache-2.0, https://github.com/mingcute-design/mingcute-icons. Core regular SVG paths are converted into `android/app/src/main/kotlin/com/storage/redirect/x/ui/icon/AppIcons.kt`.
 
 Build and packaging tools:
 

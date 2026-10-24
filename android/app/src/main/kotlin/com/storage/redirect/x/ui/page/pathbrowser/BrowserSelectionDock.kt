@@ -11,11 +11,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.icon.AppIcons
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -57,7 +55,7 @@ internal fun BrowserSelectionDock(state: PathBrowserState, onConfirm: () -> Unit
                             stringResource(R.string.browser_selected_count, state.selectedPaths.size),
                             color = colors.primary, fontWeight = FontWeight.Medium,
                         )
-                        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, Modifier.size(18.dp), tint = colors.summary)
+                        Icon(AppIcons.ChevronRight, null, Modifier.size(18.dp), tint = colors.summary)
                     }
                     BrowserText(
                         stringResource(if (state.isExcludeMode) R.string.browser_exclude_hint else R.string.browser_cross_directory),
@@ -70,7 +68,7 @@ internal fun BrowserSelectionDock(state: PathBrowserState, onConfirm: () -> Unit
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Icon(Icons.Rounded.Folder, null, tint = colors.primary)
+                    Icon(AppIcons.Folder, null, tint = colors.primary)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         BrowserText(stringResource(R.string.browser_current_location), color = colors.summary, fontSize = 12.sp)
                         BrowserText(state.currentPath.ifEmpty { stringResource(R.string.browser_enter_directory) }, maxLines = 1)

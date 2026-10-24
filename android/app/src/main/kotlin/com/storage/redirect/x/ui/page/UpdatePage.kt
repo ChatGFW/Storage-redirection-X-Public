@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.icon.AppIcons
 import java.util.Locale
 import com.storage.redirect.x.data.cache.AppPreferences
 import com.storage.redirect.x.data.cache.PreferenceKeys
@@ -47,8 +48,6 @@ import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.window.WindowDialog
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 // 页面间距
@@ -89,7 +88,7 @@ fun UpdatePage(
                     onClick = onBack,
                     modifier = Modifier.padding(start = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
                 ) {
-                    Icon(MiuixIcons.Back, contentDescription = stringResource(R.string.common_close))
+                    Icon(AppIcons.Back, contentDescription = stringResource(R.string.common_close))
                 }
             }
         )

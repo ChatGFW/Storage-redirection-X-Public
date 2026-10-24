@@ -14,10 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircleOutline
-import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.HourglassEmpty
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.ui.theme.isInDarkTheme
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -52,7 +49,7 @@ fun StatusCard(
 ) {
     val statusInfo = when (status) {
         ModuleStatus.INSTALLED -> StatusInfo(
-            icon = Icons.Rounded.CheckCircleOutline,
+            icon = AppIcons.CheckCircle,
             cardColor = when {
                 isDynamicColor -> colorScheme.secondaryContainer
                 isInDarkTheme(themeMode) -> Color(0xFF1A3825)
@@ -67,7 +64,7 @@ fun StatusCard(
             subtitle = "${stringResource(R.string.home_version)}: $version"
         )
         ModuleStatus.NOT_INSTALLED -> StatusInfo(
-            icon = Icons.Rounded.ErrorOutline,
+            icon = AppIcons.Warning,
             cardColor = when {
                 isDynamicColor -> colorScheme.errorContainer
                 isInDarkTheme(themeMode) -> Color(0xFF310808)
@@ -82,7 +79,7 @@ fun StatusCard(
             subtitle = "${stringResource(R.string.home_version)}: $version"
         )
         ModuleStatus.ERROR -> StatusInfo(
-            icon = Icons.Rounded.ErrorOutline,
+            icon = AppIcons.Warning,
             cardColor = when {
                 isDynamicColor -> colorScheme.errorContainer
                 isInDarkTheme(themeMode) -> Color(0xFF310808)
@@ -97,7 +94,7 @@ fun StatusCard(
             subtitle = errorMessage
         )
         ModuleStatus.LOADING -> StatusInfo(
-            icon = Icons.Rounded.HourglassEmpty,
+            icon = AppIcons.Pending,
             cardColor = colorScheme.secondaryContainer,
             iconColor = colorScheme.secondary,
             title = stringResource(R.string.common_loading),

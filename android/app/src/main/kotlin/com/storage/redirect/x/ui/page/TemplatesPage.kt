@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.data.model.PathValidationResult
 import com.storage.redirect.x.data.model.RedirectConfig
 import com.storage.redirect.x.data.model.RedirectTemplate
@@ -48,12 +49,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.window.WindowDialog
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Add
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Delete
-import top.yukonga.miuix.kmp.icon.extended.Edit
-import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val TEMPLATE_PAGE_HORIZONTAL_PADDING = 16.dp
@@ -113,7 +108,7 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                             .padding(start = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
                             .testTag("templates_back_button"),
                     ) {
-                        Icon(MiuixIcons.Back, contentDescription = null)
+                        Icon(AppIcons.Back, contentDescription = null)
                     }
                 },
                 actions = {
@@ -128,7 +123,7 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                             .testTag("templates_add_button"),
                     ) {
                         Icon(
-                            MiuixIcons.Add,
+                            AppIcons.Add,
                             contentDescription = stringResource(R.string.templates_add),
                             tint = MiuixTheme.colorScheme.primary,
                         )
@@ -194,7 +189,7 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                                 modifier = Modifier.testTag("template_edit_${template.id}"),
                             ) {
                                 Icon(
-                                    MiuixIcons.Edit,
+                                    AppIcons.Edit,
                                     contentDescription = stringResource(R.string.common_edit),
                                 )
                             }
@@ -203,7 +198,7 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                                 modifier = Modifier.testTag("template_delete_${template.id}"),
                             ) {
                                 Icon(
-                                    MiuixIcons.Delete,
+                                    AppIcons.Delete,
                                     contentDescription = stringResource(R.string.common_delete),
                                     tint = MiuixTheme.colorScheme.error,
                                 )
@@ -330,7 +325,7 @@ private fun TemplateEditorPage(
                             .padding(start = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
                             .testTag("template_editor_back_button"),
                     ) {
-                        Icon(MiuixIcons.Back, contentDescription = null)
+                        Icon(AppIcons.Back, contentDescription = null)
                     }
                 },
                 actions = {
@@ -344,7 +339,7 @@ private fun TemplateEditorPage(
                             .padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
                             .testTag("template_rename_button"),
                     ) {
-                        Icon(MiuixIcons.Edit, contentDescription = stringResource(R.string.common_edit))
+                        Icon(AppIcons.Edit, contentDescription = stringResource(R.string.common_edit))
                     }
                 },
             )
@@ -684,7 +679,7 @@ private fun TemplateSectionHeader(
                 modifier = infoTag?.let { tag -> Modifier.testTag(tag) } ?: Modifier,
             ) {
                 Icon(
-                    MiuixIcons.Info,
+                    AppIcons.Info,
                     contentDescription = stringResource(R.string.rule_config_allowed_paths_rule_hint_desc),
                     tint = MiuixTheme.colorScheme.primary,
                 )
@@ -695,7 +690,7 @@ private fun TemplateSectionHeader(
             modifier = addTag?.let { Modifier.testTag(it) } ?: Modifier,
         ) {
             Icon(
-                MiuixIcons.Add,
+                AppIcons.Add,
                 contentDescription = stringResource(R.string.common_add),
                 tint = MiuixTheme.colorScheme.primary,
             )
@@ -729,14 +724,14 @@ private fun TemplateRuleRow(text: String, onEdit: () -> Unit, onDelete: () -> Un
                 onClick = onEdit,
                 modifier = Modifier.testTag("template_allowed_path_edit_$index"),
             ) {
-                Icon(MiuixIcons.Edit, contentDescription = stringResource(R.string.common_edit))
+                Icon(AppIcons.Edit, contentDescription = stringResource(R.string.common_edit))
             }
             IconButton(
                 onClick = onDelete,
                 modifier = Modifier.testTag("template_allowed_path_delete_$index"),
             ) {
                 Icon(
-                    MiuixIcons.Delete,
+                    AppIcons.Delete,
                     contentDescription = stringResource(R.string.common_delete),
                     tint = MiuixTheme.colorScheme.error,
                 )
@@ -781,14 +776,14 @@ private fun TemplateMappingRow(mapping: StoragePathMapping, index: Int, onEdit: 
                 onClick = onEdit,
                 modifier = Modifier.testTag("template_mapping_edit_$index"),
             ) {
-                Icon(MiuixIcons.Edit, contentDescription = stringResource(R.string.common_edit))
+                Icon(AppIcons.Edit, contentDescription = stringResource(R.string.common_edit))
             }
             IconButton(
                 onClick = onDelete,
                 modifier = Modifier.testTag("template_mapping_delete_$index"),
             ) {
                 Icon(
-                    MiuixIcons.Delete,
+                    AppIcons.Delete,
                     contentDescription = stringResource(R.string.common_delete),
                     tint = MiuixTheme.colorScheme.error,
                 )

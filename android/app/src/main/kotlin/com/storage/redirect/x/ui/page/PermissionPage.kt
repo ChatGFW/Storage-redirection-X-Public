@@ -35,16 +35,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.data.service.RootService
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.basic.Check
-import top.yukonga.miuix.kmp.icon.extended.Info
-import top.yukonga.miuix.kmp.icon.extended.Lock
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 // 权限状态
@@ -124,7 +121,7 @@ fun PermissionPage(onAllGranted: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = MiuixIcons.Lock,
+                imageVector = AppIcons.Lock,
                 contentDescription = null,
                 tint = colorScheme.onPrimary,
                 modifier = Modifier.size(36.dp)
@@ -227,7 +224,7 @@ private fun PermissionCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (isGranted) MiuixIcons.Basic.Check else MiuixIcons.Info,
+                    imageVector = if (isGranted) AppIcons.Check else AppIcons.Info,
                     contentDescription = null,
                     tint = if (isGranted) colorScheme.primary else colorScheme.secondary,
                     modifier = Modifier.size(22.dp)

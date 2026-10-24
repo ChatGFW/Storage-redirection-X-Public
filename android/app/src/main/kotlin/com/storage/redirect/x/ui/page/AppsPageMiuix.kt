@@ -7,7 +7,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -29,16 +28,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.People
-import androidx.compose.material.icons.rounded.RadioButtonChecked
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
@@ -63,6 +51,7 @@ import com.storage.redirect.x.data.repository.TemplateApplyMode
 import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
 import com.storage.redirect.x.ui.component.SrxSmallTopAppBar
 import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.icon.AppIcons
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -80,10 +69,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.window.WindowDialog
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.ChevronForward
-import top.yukonga.miuix.kmp.icon.extended.SelectAll
-import top.yukonga.miuix.kmp.icon.extended.Undo
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
@@ -205,7 +190,7 @@ private fun BatchTopBarMiuix(data: AppsPageData, actions: AppsPageActions) {
                 onClick = actions.onCancelBatch,
                 modifier = Modifier.testTag("apps_multi_select_cancel"),
             ) {
-                Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.common_cancel))
+                Icon(AppIcons.Close, contentDescription = stringResource(R.string.common_cancel))
             }
         },
         actions = {
@@ -213,19 +198,19 @@ private fun BatchTopBarMiuix(data: AppsPageData, actions: AppsPageActions) {
                 onClick = actions.onSelectAll,
                 modifier = Modifier.testTag("apps_multi_select_select_all"),
             ) {
-                Icon(MiuixIcons.SelectAll, contentDescription = stringResource(R.string.apps_select_all))
+                Icon(AppIcons.SelectAll, contentDescription = stringResource(R.string.apps_select_all))
             }
             IconButton(
                 onClick = actions.onInvertSelection,
                 modifier = Modifier.testTag("apps_multi_select_invert"),
             ) {
-                Icon(Icons.Rounded.SwapHoriz, contentDescription = stringResource(R.string.apps_invert_selection))
+                Icon(AppIcons.Swap, contentDescription = stringResource(R.string.apps_invert_selection))
             }
             IconButton(
                 onClick = actions.onShowRestoreRules,
                 modifier = Modifier.testTag("apps_multi_select_restore"),
             ) {
-                Icon(MiuixIcons.Undo, contentDescription = stringResource(R.string.apps_restore_rules))
+                Icon(AppIcons.Undo, contentDescription = stringResource(R.string.apps_restore_rules))
             }
             IconButton(
                 onClick = actions.onShowTemplatePicker,
@@ -233,7 +218,7 @@ private fun BatchTopBarMiuix(data: AppsPageData, actions: AppsPageActions) {
                     .padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
                     .testTag("apps_multi_select_apply_template"),
             ) {
-                Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.apps_apply_template))
+                Icon(AppIcons.Layers, contentDescription = stringResource(R.string.apps_apply_template))
             }
         },
     )
@@ -249,14 +234,14 @@ private fun NormalTopBarMiuix(
         title = stringResource(R.string.apps_title),
         actions = {
             IconButton(onClick = actions.onOpenTemplates, modifier = Modifier.testTag("apps_templates_button")) {
-                Icon(Icons.Rounded.Apps, contentDescription = stringResource(R.string.apps_templates))
+                Icon(AppIcons.Layers, contentDescription = stringResource(R.string.apps_templates))
             }
             IconButton(onClick = actions.onRefresh) {
-                Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.apps_refresh))
+                Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.apps_refresh))
             }
             Box {
                 IconButton(onClick = { dialogs.showUserMenu.value = true }) {
-                    Icon(Icons.Rounded.People, contentDescription = stringResource(R.string.apps_switch_user))
+                    Icon(AppIcons.Group, contentDescription = stringResource(R.string.apps_switch_user))
                 }
                 OverlayListPopup(
                     show = dialogs.showUserMenu.value,
@@ -283,7 +268,7 @@ private fun NormalTopBarMiuix(
                     onClick = { dialogs.showFilterMenu.value = true },
                     modifier = Modifier.padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING),
                 ) {
-                    Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.apps_filter))
+                    Icon(AppIcons.More, contentDescription = stringResource(R.string.apps_filter))
                 }
                 OverlayListPopup(
                     show = dialogs.showFilterMenu.value,
@@ -549,7 +534,7 @@ private fun TemplatePickerOption(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = if (isPicked) Icons.Rounded.RadioButtonChecked else Icons.Rounded.RadioButtonUnchecked,
+            imageVector = if (isPicked) AppIcons.RadioOn else AppIcons.RadioOff,
             contentDescription = null,
             tint = if (isPicked) colorScheme.primary else colorScheme.onSurfaceVariantSummary,
             modifier = Modifier.size(20.dp),
@@ -615,7 +600,7 @@ private fun AppListItem(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            Icons.Rounded.Check,
+                            AppIcons.Check,
                             contentDescription = stringResource(
                                 if (isSelected) R.string.apps_selected else R.string.apps_tag_redirected,
                             ),
@@ -662,12 +647,12 @@ private fun AppListItem(
                     }
                 }
             }
-            Image(
-                imageVector = MiuixIcons.ChevronForward,
+            Icon(
+                imageVector = AppIcons.ChevronRight,
                 modifier = Modifier
                     .padding(start = APPS_ARROW_START_SPACING)
-                    .size(width = 10.dp, height = 16.dp),
-                colorFilter = ColorFilter.tint(colorScheme.onSurfaceVariantActions),
+                    .size(16.dp),
+                tint = colorScheme.onSurfaceVariantActions,
                 contentDescription = null,
             )
         }
