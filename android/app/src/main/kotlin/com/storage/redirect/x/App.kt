@@ -256,7 +256,7 @@ fun App(
                                 0 -> HomePage(
                                     themeMode = themeSettings.colorMode.value,
                                     bottomInnerPadding = overlayBottomPadding,
-                                    onMenuStateChange = { isAnyMenuOpen = it },
+                                    onTemplatesClick = { isTemplatesPageVisible = true },
                                 )
                                 1 -> AppsPage(
                                     onAppClick = { packageName, appName, userId ->

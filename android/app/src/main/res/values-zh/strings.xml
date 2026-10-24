@@ -44,12 +44,20 @@
     <string name="home_title">存储重定向 X</string>
     <string name="home_module_installed">模块已安装</string>
     <string name="home_module_not_installed">模块未安装</string>
-    <string name="home_version">版本</string>
+    <string name="home_version_value">版本 %1$s</string>
+    <string name="home_module_not_installed_hint">在 Root 管理器中刷入模块后重启</string>
     <string name="home_redirected_apps">已重定向应用</string>
     <string name="home_redirect_count">生效次数</string>
 
     <!-- 首页操作 -->
-    <string name="home_actions_menu">快捷操作</string>
+    <string name="home_quick_actions">快捷操作</string>
+    <string name="home_action_templates">规则模板</string>
+    <string name="home_action_templates_summary">管理可复用的路径规则</string>
+    <string name="home_action_logs">模块日志</string>
+    <string name="home_action_logs_summary">查看重定向与 Hook 记录</string>
+    <string name="home_action_restart_media_summary">让新规则立即生效</string>
+    <string name="home_action_restart_media_unavailable">模块未运行，暂不可用</string>
+    <string name="home_device_info">设备信息</string>
     <string name="home_action_restart_media">重启媒体工具</string>
     <string name="home_action_restart_media_confirm_title">重启媒体工具？</string>
     <string name="home_action_restart_media_confirm_summary">媒体工具将重启，已开启重定向的应用会被关闭，下次打开时重新生效规则。期间相册、相机可能短暂无法访问，是否继续？</string>
@@ -264,7 +272,6 @@
     <string name="common_save">保存</string>
     <string name="common_retry">重试</string>
     <string name="common_loading">加载中…</string>
-    <string name="common_error">错误</string>
 
     <!-- Permission -->
     <string name="permission_title">需要授权</string>

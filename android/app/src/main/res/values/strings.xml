@@ -44,12 +44,20 @@
     <string name="home_title">Storage Redirect X</string>
     <string name="home_module_installed">Module Installed</string>
     <string name="home_module_not_installed">Module Not Installed</string>
-    <string name="home_version">Version</string>
+    <string name="home_version_value">Version %1$s</string>
+    <string name="home_module_not_installed_hint">Flash the module in your root manager, then reboot</string>
     <string name="home_redirected_apps">Redirected Apps</string>
     <string name="home_redirect_count">Redirect Count</string>
 
     <!-- Home Actions -->
-    <string name="home_actions_menu">Quick actions</string>
+    <string name="home_quick_actions">Quick actions</string>
+    <string name="home_action_templates">Rule templates</string>
+    <string name="home_action_templates_summary">Manage reusable path rules</string>
+    <string name="home_action_logs">Module logs</string>
+    <string name="home_action_logs_summary">View redirect and hook records</string>
+    <string name="home_action_restart_media_summary">Apply new rules right away</string>
+    <string name="home_action_restart_media_unavailable">Module is not running</string>
+    <string name="home_device_info">Device info</string>
     <string name="home_action_restart_media">Restart media tool</string>
     <string name="home_action_restart_media_confirm_title">Restart media tool?</string>
     <string name="home_action_restart_media_confirm_summary">The media tool will restart and apps with redirection enabled will be closed, reapplying rules on next launch. Gallery and camera may be briefly unavailable. Continue?</string>
@@ -273,7 +281,6 @@
     <string name="common_save">Save</string>
     <string name="common_retry">Retry</string>
     <string name="common_loading">Loading…</string>
-    <string name="common_error">Error</string>
 
     <!-- Permission -->
     <string name="permission_title">Permission Required</string>

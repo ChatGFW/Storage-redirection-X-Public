@@ -1,9 +1,7 @@
 package com.storage.redirect.x.ui.page
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,11 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,7 +24,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.R
@@ -35,73 +33,58 @@ import com.storage.redirect.x.data.cache.HomeDataCache
 import com.storage.redirect.x.data.repository.ConfigRepository
 import com.storage.redirect.x.data.repository.ModuleRepository
 import com.storage.redirect.x.data.service.RootService
+import com.storage.redirect.x.ui.component.ModuleStatus
 import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
+import com.storage.redirect.x.ui.component.PreferenceIcon
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.component.StatusCard
 import com.storage.redirect.x.ui.icon.AppIcons
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.DropdownDefaults
-import top.yukonga.miuix.kmp.basic.DropdownImpl
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
-import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
-import top.yukonga.miuix.kmp.overlay.OverlayListPopup
+import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-// 信息卡正文间距与内边距，弹出菜单边距，对话框按钮间距
-private val HOME_INFO_TEXT_TOP_SPACING = 2.dp
-private val HOME_INFO_TEXT_DEFAULT_BOTTOM_SPACING = 24.dp
-private val HOME_INFO_TEXT_NO_BOTTOM_SPACING = 0.dp
-private val HOME_INFO_CARD_CONTENT_PADDING = 16.dp
-private val HOME_POPUP_MARGIN = 8.dp
+// 设备信息数值最大宽度，超出换行保持右对齐
+private val HOME_INFO_VALUE_MAX_WIDTH = 180.dp
 private val HOME_DIALOG_BUTTON_SPACING = 12.dp
-
-// 顶栏弹出菜单沿用 Apps 页样式，统一与系统状态栏保持安全距离
-private val homeTopBarPopupPositionProvider = object : PopupPositionProvider by ListPopupDefaults.DropdownPositionProvider {
-    override fun getMargins(): PaddingValues = PaddingValues(
-        horizontal = HOME_POPUP_MARGIN,
-        vertical = HOME_POPUP_MARGIN
-    )
-}
 
 @Composable
 fun HomePage(
     themeMode: Int = 0,
     bottomInnerPadding: Dp = 0.dp,
-    onMenuStateChange: (Boolean) -> Unit = {},
+    onTemplatesClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val moduleRepo = remember { ModuleRepository() }
     val configRepo = remember { ConfigRepository() }
     val scope = rememberCoroutineScope()
 
-    val showActionsMenu = remember { mutableStateOf(false) }
-    val showRestartMediaDialog = remember { mutableStateOf(false) }
+    var isLogsPageVisible by remember { mutableStateOf(false) }
+    var isRestartDialogVisible by remember { mutableStateOf(false) }
     var isRestarting by remember { mutableStateOf(false) }
-
-    // 菜单展开状态上抛，供父级禁用底栏
-    LaunchedEffect(showActionsMenu.value) {
-        onMenuStateChange(showActionsMenu.value)
-    }
 
     LaunchedEffect(Unit) {
         HomeDataCache.ensureLoaded(moduleRepo, configRepo, context.packageManager, context.packageName)
         DeviceInfoCache.ensureLoaded()
     }
 
+    if (isLogsPageVisible) {
+        LogsPage(onBack = { isLogsPageVisible = false }, bottomInnerPadding = bottomInnerPadding)
+        return
+    }
+
     val onConfirmRestart: () -> Unit = {
-        showRestartMediaDialog.value = false
+        isRestartDialogVisible = false
         scope.launch {
             isRestarting = true
             Toast.makeText(context, R.string.home_action_restart_media_running, Toast.LENGTH_SHORT).show()
@@ -116,27 +99,8 @@ fun HomePage(
             Toast.makeText(context, msgRes, Toast.LENGTH_SHORT).show()
         }
     }
-
-    HomePageMiuix(
-        themeMode = themeMode,
-        bottomInnerPadding = bottomInnerPadding,
-        showActionsMenu = showActionsMenu,
-        showRestartDialog = showRestartMediaDialog,
-        isRestarting = isRestarting,
-        onConfirmRestart = onConfirmRestart,
-    )
-}
-
-@Composable
-private fun HomePageMiuix(
-    themeMode: Int,
-    bottomInnerPadding: Dp,
-    showActionsMenu: MutableState<Boolean>,
-    showRestartDialog: MutableState<Boolean>,
-    isRestarting: Boolean,
-    onConfirmRestart: () -> Unit,
-) {
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
+    val isModuleInstalled = HomeDataCache.moduleStatus == ModuleStatus.INSTALLED
 
     Column(
         modifier = Modifier
@@ -146,36 +110,6 @@ private fun HomePageMiuix(
         SrxTopAppBar(
             title = stringResource(R.string.home_title),
             scrollBehavior = scrollBehavior,
-            actions = {
-                Box {
-                    IconButton(onClick = { showActionsMenu.value = true }) {
-                        Icon(
-                            imageVector = AppIcons.Restart,
-                            contentDescription = stringResource(R.string.home_actions_menu)
-                        )
-                    }
-                    OverlayListPopup(
-                        show = showActionsMenu.value,
-                        popupPositionProvider = homeTopBarPopupPositionProvider,
-                        alignment = PopupPositionProvider.Align.TopEnd,
-                        onDismissRequest = { showActionsMenu.value = false },
-                    ) {
-                        ListPopupColumn {
-                            DropdownImpl(
-                                text = stringResource(R.string.home_action_restart_media),
-                                optionSize = 1,
-                                isSelected = false,
-                                index = 0,
-                                dropdownColors = DropdownDefaults.dropdownColors(),
-                                onSelectedIndexChange = {
-                                    showActionsMenu.value = false
-                                    showRestartDialog.value = true
-                                }
-                            )
-                        }
-                    }
-                }
-            }
         )
 
         Column(
@@ -186,29 +120,37 @@ private fun HomePageMiuix(
         ) {
             Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
 
-            // 模块状态卡片
             StatusCard(
                 status = HomeDataCache.moduleStatus,
                 version = HomeDataCache.moduleVersion,
                 redirectedAppsCount = HomeDataCache.redirectedAppsCount,
-                redirectCount = HomeDataCache.redirectCount.toString(),
+                redirectCount = HomeDataCache.redirectCount,
                 themeMode = themeMode,
                 modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)
             )
 
             Spacer(Modifier.height(PAGE_GROUP_GAP))
 
-            // 设备信息
-            InfoCard()
+            QuickActionsCard(
+                isRestartEnabled = isModuleInstalled && !isRestarting,
+                isModuleInstalled = isModuleInstalled,
+                onTemplatesClick = onTemplatesClick,
+                onLogsClick = { isLogsPageVisible = true },
+                onRestartClick = { isRestartDialogVisible = true },
+            )
+
+            Spacer(Modifier.height(PAGE_GROUP_GAP))
+
+            DeviceInfoCard()
 
             Spacer(Modifier.height(PAGE_GROUP_GAP + bottomInnerPadding))
         }
     }
 
     WindowDialog(
-        show = showRestartDialog.value,
+        show = isRestartDialogVisible,
         title = stringResource(R.string.home_action_restart_media_confirm_title),
-        onDismissRequest = { showRestartDialog.value = false }
+        onDismissRequest = { isRestartDialogVisible = false }
     ) {
         Column {
             Text(text = stringResource(R.string.home_action_restart_media_confirm_summary))
@@ -216,7 +158,7 @@ private fun HomePageMiuix(
             Row(modifier = Modifier.fillMaxWidth()) {
                 TextButton(
                     text = stringResource(R.string.common_cancel),
-                    onClick = { showRestartDialog.value = false },
+                    onClick = { isRestartDialogVisible = false },
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.width(HOME_DIALOG_BUTTON_SPACING))
@@ -232,58 +174,71 @@ private fun HomePageMiuix(
     }
 }
 
-// 设备信息卡片
+// 快捷操作：模板、日志、重启媒体工具；重启依赖模块运行
 @Composable
-private fun InfoCard() {
-    val colorScheme = MiuixTheme.colorScheme
-
-    @Composable
-    fun InfoText(
-        title: String,
-        content: String,
-        bottomPadding: Dp = HOME_INFO_TEXT_DEFAULT_BOTTOM_SPACING
-    ) {
-        Text(
-            text = title,
-            fontSize = MiuixTheme.textStyles.headline1.fontSize,
-            fontWeight = FontWeight.Medium,
-            color = colorScheme.onSurface
-        )
-        Text(
-            text = content,
-            fontSize = MiuixTheme.textStyles.body2.fontSize,
-            color = colorScheme.onSurfaceVariantSummary,
-            modifier = Modifier.padding(top = HOME_INFO_TEXT_TOP_SPACING, bottom = bottomPadding)
-        )
-    }
-
+private fun QuickActionsCard(
+    isRestartEnabled: Boolean,
+    isModuleInstalled: Boolean,
+    onTemplatesClick: () -> Unit,
+    onLogsClick: () -> Unit,
+    onRestartClick: () -> Unit,
+) {
+    SmallTitle(text = stringResource(R.string.home_quick_actions))
     Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(HOME_INFO_CARD_CONTENT_PADDING)
-        ) {
-            InfoText(
-                title = stringResource(R.string.home_device_model),
-                content = DeviceInfoCache.deviceModel
-            )
-            InfoText(
-                title = stringResource(R.string.home_android_version),
-                content = DeviceInfoCache.androidVersion
-            )
-            InfoText(
-                title = stringResource(R.string.home_kernel_version),
-                content = DeviceInfoCache.kernelVersion
-            )
-            InfoText(
-                title = stringResource(R.string.home_selinux_status),
-                content = DeviceInfoCache.selinuxStatus
-            )
-            InfoText(
-                title = stringResource(R.string.home_system_arch),
-                content = DeviceInfoCache.systemArch,
-                bottomPadding = HOME_INFO_TEXT_NO_BOTTOM_SPACING
-            )
-        }
+        ArrowPreference(
+            title = stringResource(R.string.home_action_templates),
+            summary = stringResource(R.string.home_action_templates_summary),
+            startAction = { PreferenceIcon(AppIcons.Layers) },
+            modifier = Modifier.testTag("home_action_templates"),
+            onClick = onTemplatesClick,
+        )
+        ArrowPreference(
+            title = stringResource(R.string.home_action_logs),
+            summary = stringResource(R.string.home_action_logs_summary),
+            startAction = { PreferenceIcon(AppIcons.Document) },
+            modifier = Modifier.testTag("home_action_logs"),
+            onClick = onLogsClick,
+        )
+        ArrowPreference(
+            title = stringResource(R.string.home_action_restart_media),
+            summary = if (isModuleInstalled) {
+                stringResource(R.string.home_action_restart_media_summary)
+            } else {
+                stringResource(R.string.home_action_restart_media_unavailable)
+            },
+            startAction = { PreferenceIcon(AppIcons.Restart, isEnabled = isRestartEnabled) },
+            modifier = Modifier.testTag("home_action_restart_media"),
+            enabled = isRestartEnabled,
+            onClick = onRestartClick,
+        )
     }
+}
+
+// 设备信息：标题 + 右侧数值单行
+@Composable
+private fun DeviceInfoCard() {
+    SmallTitle(text = stringResource(R.string.home_device_info))
+    Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
+        DeviceInfoRow(stringResource(R.string.home_device_model), DeviceInfoCache.deviceModel)
+        DeviceInfoRow(stringResource(R.string.home_android_version), DeviceInfoCache.androidVersion)
+        DeviceInfoRow(stringResource(R.string.home_kernel_version), DeviceInfoCache.kernelVersion)
+        DeviceInfoRow(stringResource(R.string.home_selinux_status), DeviceInfoCache.selinuxStatus)
+        DeviceInfoRow(stringResource(R.string.home_system_arch), DeviceInfoCache.systemArch)
+    }
+}
+
+@Composable
+private fun DeviceInfoRow(title: String, value: String) {
+    BasicComponent(
+        title = title,
+        endActions = {
+            Text(
+                text = value,
+                modifier = Modifier.widthIn(max = HOME_INFO_VALUE_MAX_WIDTH),
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                textAlign = TextAlign.End,
+            )
+        },
+    )
 }
