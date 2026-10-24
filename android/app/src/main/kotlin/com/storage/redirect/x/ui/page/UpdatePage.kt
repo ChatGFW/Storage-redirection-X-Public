@@ -1,7 +1,7 @@
 package com.storage.redirect.x.ui.page
 
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -147,7 +147,7 @@ fun UpdatePage(
             show = showUpdateDialog,
             result = result,
             onDownload = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(result.releaseUrl)))
+                context.startActivity(Intent(Intent.ACTION_VIEW, result.releaseUrl.toUri()))
             }
         )
     }

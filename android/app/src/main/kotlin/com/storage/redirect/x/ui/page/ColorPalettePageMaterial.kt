@@ -59,6 +59,7 @@ import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
@@ -69,9 +70,7 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -317,7 +316,9 @@ fun ColorPalettePageMaterial(
                 )
 
                 TonalCard(modifier = Modifier.padding(top = 4.dp)) {
-                    var sliderValue by remember(themeSettings.pageScale) { mutableFloatStateOf(themeSettings.pageScale) }
+                    val sliderState = remember(themeSettings.pageScale) {
+                        SliderState(value = themeSettings.pageScale, trackRange = 0.8f..1.1f)
+                    }
 
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -346,19 +347,18 @@ fun ColorPalettePageMaterial(
                                 )
                             }
                             Text(
-                                text = "${(sliderValue * 100).toInt()}%",
+                                text = "${(sliderState.value * 100).toInt()}%",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
                         Slider(
-                            value = sliderValue,
-                            onValueChange = { sliderValue = it },
+                            state = sliderState,
+                            onValueChange = { sliderState.value = it },
                             onValueChangeFinished = {
-                                onThemeSettingsChange(themeSettings.copy(pageScale = sliderValue))
+                                onThemeSettingsChange(themeSettings.copy(pageScale = sliderState.value))
                             },
-                            valueRange = 0.8f..1.1f,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

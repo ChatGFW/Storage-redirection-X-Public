@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import com.storage.redirect.x.R
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import top.yukonga.miuix.kmp.basic.Card
@@ -129,7 +129,7 @@ fun OpenSourceLicensesPage(onBack: () -> Unit) {
     val context = LocalContext.current
 
     val onOpenUrl: (String) -> Unit = { url ->
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
     }
 
     BackHandler(onBack = onBack)

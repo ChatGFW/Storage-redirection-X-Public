@@ -2,6 +2,7 @@ package com.storage.redirect.x.data.cache
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 // 轻量持久化工具，在 Activity 启动时初始化
 // 用于缓存设备信息和权限状态，避免每次启动重新加载导致 UI 闪烁
@@ -30,18 +31,18 @@ object AppPreferences {
     }
 
     fun put(key: String, value: String) {
-        prefs.edit().putString(key, value).apply()
+        prefs.edit { putString(key, value) }
     }
 
     fun put(key: String, value: Int) {
-        prefs.edit().putInt(key, value).apply()
+        prefs.edit { putInt(key, value) }
     }
 
     fun put(key: String, value: Boolean) {
-        prefs.edit().putBoolean(key, value).apply()
+        prefs.edit { putBoolean(key, value) }
     }
 
     fun put(key: String, value: Float) {
-        prefs.edit().putFloat(key, value).apply()
+        prefs.edit { putFloat(key, value) }
     }
 }

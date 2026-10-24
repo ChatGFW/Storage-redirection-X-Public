@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.R
@@ -396,7 +397,7 @@ private fun BatchTopBar(
     onApplyTemplate: () -> Unit,
 ) {
     TopAppBar(
-        title = { Text(stringResource(R.string.apps_selected_count, selectedCount)) },
+        title = { Text(pluralStringResource(R.plurals.apps_selected_count, selectedCount, selectedCount)) },
         navigationIcon = {
             IconButton(onClick = onCancel, modifier = Modifier.testTag("apps_multi_select_cancel")) {
                 Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.common_cancel))
@@ -476,7 +477,7 @@ private fun AppMaterialDialogs(
 
     if (showApplyModeDialog.value) {
         val templateName = selectedTemplate?.name.orEmpty()
-        val targetName = stringResource(R.string.apps_selected_count, selectedBatchCount)
+        val targetName = pluralStringResource(R.plurals.apps_selected_count, selectedBatchCount, selectedBatchCount)
         AlertDialog(
             onDismissRequest = onDismissApplyMode,
             title = { Text(stringResource(R.string.apps_template_apply_mode_title)) },

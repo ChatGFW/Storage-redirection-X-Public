@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
@@ -198,7 +199,7 @@ internal fun AppsPageMiuix(
 @Composable
 private fun BatchTopBarMiuix(data: AppsPageData, actions: AppsPageActions) {
     SrxSmallTopAppBar(
-        title = stringResource(R.string.apps_selected_count, data.selectedBatchCount),
+        title = pluralStringResource(R.plurals.apps_selected_count, data.selectedBatchCount, data.selectedBatchCount),
         navigationIcon = {
             IconButton(
                 onClick = actions.onCancelBatch,
@@ -344,7 +345,7 @@ private fun AppTemplateDialogs(
     )
 
     val templateName = data.selectedTemplate?.name.orEmpty()
-    val applyTargetName = stringResource(R.string.apps_selected_count, data.selectedBatchCount)
+    val applyTargetName = pluralStringResource(R.plurals.apps_selected_count, data.selectedBatchCount, data.selectedBatchCount)
     WindowDialog(
         show = dialogs.showApplyModeDialog.value,
         title = stringResource(R.string.apps_template_apply_mode_title),

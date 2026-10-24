@@ -46,9 +46,9 @@ fun StatusCard(
     version: String,
     redirectedAppsCount: String,
     redirectCount: String,
+    modifier: Modifier = Modifier,
     themeMode: Int = 0,
-    errorMessage: String = "",
-    modifier: Modifier = Modifier
+    errorMessage: String = ""
 ) {
     val statusInfo = when (status) {
         ModuleStatus.INSTALLED -> StatusInfo(

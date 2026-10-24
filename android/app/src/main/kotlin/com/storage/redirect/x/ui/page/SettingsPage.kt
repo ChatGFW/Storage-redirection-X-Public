@@ -18,9 +18,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -58,6 +60,7 @@ fun SettingsPage(
     bottomInnerPadding: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
     val context = LocalContext.current
+    val resources by rememberUpdatedState(LocalResources.current)
     val settingsViewModel: SettingsViewModel = viewModel()
     val uiState by settingsViewModel.uiState.collectAsState()
     var isThemePageVisible by remember { mutableStateOf(false) }
@@ -68,9 +71,9 @@ fun SettingsPage(
                 is SettingsUiEvent.BackupFinished -> {
                     val result = event.result
                     val message = if (result.isSuccess) {
-                        context.getString(R.string.settings_backup_success_with_count, result.packageCount)
+                        resources.getQuantityString(R.plurals.settings_backup_success_with_count, result.packageCount, result.packageCount)
                     } else {
-                        context.getString(R.string.settings_backup_failed_with_count, result.packageCount)
+                        resources.getQuantityString(R.plurals.settings_backup_failed_with_count, result.packageCount, result.packageCount)
                     }
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                     BackupRestoreNotifier.notifyBackupResult(context, result.isSuccess, result.packageCount)
@@ -80,13 +83,15 @@ fun SettingsPage(
                 is SettingsUiEvent.RestoreFinished -> {
                     val result = event.result
                     val message = if (result.isSuccess) {
-                        context.getString(
-                            R.string.settings_restore_success_with_count,
+                        resources.getQuantityString(
+                            R.plurals.settings_restore_success_with_count,
+                            result.restoredPackageCount,
                             result.restoredPackageCount,
                         )
                     } else {
-                        context.getString(
-                            R.string.settings_restore_failed_with_count,
+                        resources.getQuantityString(
+                            R.plurals.settings_restore_failed_with_count,
+                            result.restoredPackageCount,
                             result.restoredPackageCount,
                         )
                     }

@@ -24,6 +24,7 @@
 !/android/app/src/**/*.kt
 !/android/app/src/**/*.xml
 !/android/app/src/main/res/**/*.png
+!/android/app/src/main/res/resources.properties
 
 # Rust、Java Hook 与原生依赖；不放行生成的 DEX、库或补丁存档。
 !/srx_core/
