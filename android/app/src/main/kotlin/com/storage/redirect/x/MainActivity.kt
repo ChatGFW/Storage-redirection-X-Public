@@ -47,8 +47,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        // 初始化持久化并同步恢复缓存，确保首帧即有数据
-        AppPreferences.init(this)
+        // 同步恢复缓存，确保首帧即有数据；AppPreferences 已在 SrxApplication 初始化
         DeviceInfoCache.restoreFromPrefs()
         HomeDataCache.restoreFromPrefs()
         BackupRestoreNotifier.ensureChannel(this)

@@ -63,24 +63,19 @@ fun HomePage(
     themeMode: Int = 0,
     bottomInnerPadding: Dp = 0.dp,
     onTemplatesClick: () -> Unit = {},
+    onLogsClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val moduleRepo = remember { ModuleRepository() }
     val configRepo = remember { ConfigRepository() }
     val scope = rememberCoroutineScope()
 
-    var isLogsPageVisible by remember { mutableStateOf(false) }
     var isRestartDialogVisible by remember { mutableStateOf(false) }
     var isRestarting by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         HomeDataCache.ensureLoaded(moduleRepo, configRepo, context.packageManager, context.packageName)
         DeviceInfoCache.ensureLoaded()
-    }
-
-    if (isLogsPageVisible) {
-        LogsPage(onBack = { isLogsPageVisible = false }, bottomInnerPadding = bottomInnerPadding)
-        return
     }
 
     val onConfirmRestart: () -> Unit = {
@@ -135,7 +130,7 @@ fun HomePage(
                 isRestartEnabled = isModuleInstalled && !isRestarting,
                 isModuleInstalled = isModuleInstalled,
                 onTemplatesClick = onTemplatesClick,
-                onLogsClick = { isLogsPageVisible = true },
+                onLogsClick = onLogsClick,
                 onRestartClick = { isRestartDialogVisible = true },
             )
 

@@ -16,10 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -32,7 +29,6 @@ import com.storage.redirect.x.BuildConfig
 import com.storage.redirect.x.R
 import com.storage.redirect.x.data.cache.AppPreferences
 import com.storage.redirect.x.data.cache.PreferenceKeys
-import com.storage.redirect.x.ui.component.bottombar.BottomBarAppearanceState
 import com.storage.redirect.x.util.BackupRestoreNotifier
 import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
@@ -40,7 +36,6 @@ import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PreferenceIcon
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.icon.AppIcons
-import com.storage.redirect.x.ui.theme.AppThemeSettings
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -52,17 +47,16 @@ import top.yukonga.miuix.kmp.preference.SwitchPreference
 @Composable
 @SuppressLint("LocalContextGetResourceValueCall")
 fun SettingsPage(
-    themeSettings: AppThemeSettings = AppThemeSettings(),
-    onThemeSettingsChange: (AppThemeSettings) -> Unit = {},
-    bottomBarAppearance: BottomBarAppearanceState = BottomBarAppearanceState(),
-    onBottomBarAppearanceChange: (BottomBarAppearanceState) -> Unit = {},
+    onOpenTheme: () -> Unit,
+    onOpenLogs: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onOpenUpdate: () -> Unit,
     bottomInnerPadding: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
     val context = LocalContext.current
     val resources by rememberUpdatedState(LocalResources.current)
     val settingsViewModel: SettingsViewModel = viewModel()
     val uiState by settingsViewModel.uiState.collectAsState()
-    var isThemePageVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(settingsViewModel) {
         settingsViewModel.events.collect { event ->
@@ -106,22 +100,13 @@ fun SettingsPage(
         }
     }
 
-    if (isThemePageVisible) {
-        ColorPalettePage(
-            themeSettings = themeSettings,
-            onThemeSettingsChange = onThemeSettingsChange,
-            bottomBarAppearance = bottomBarAppearance,
-            onBottomBarAppearanceChange = onBottomBarAppearanceChange,
-            onBack = { isThemePageVisible = false },
-            bottomInnerPadding = bottomInnerPadding,
-        )
-        return
-    }
-
     SettingsPageMiuix(
         settingsViewModel = settingsViewModel,
         uiState = uiState,
-        onOpenTheme = { isThemePageVisible = true },
+        onOpenTheme = onOpenTheme,
+        onOpenLogs = onOpenLogs,
+        onOpenAbout = onOpenAbout,
+        onOpenUpdate = onOpenUpdate,
         bottomInnerPadding = bottomInnerPadding,
     )
 }
@@ -131,42 +116,12 @@ private fun SettingsPageMiuix(
     settingsViewModel: SettingsViewModel,
     uiState: SettingsUiState,
     onOpenTheme: () -> Unit,
+    onOpenLogs: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onOpenUpdate: () -> Unit,
     bottomInnerPadding: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
     val context = LocalContext.current
-
-    if (uiState.isLogsPageVisible) {
-        LogsPage(
-            onBack = { settingsViewModel.setLogsPageVisible(false) },
-            bottomInnerPadding = bottomInnerPadding,
-        )
-        return
-    }
-
-    if (uiState.isLicensesPageVisible) {
-        OpenSourceLicensesPage(
-            onBack = { settingsViewModel.setLicensesPageVisible(false) },
-            bottomInnerPadding = bottomInnerPadding,
-        )
-        return
-    }
-
-    if (uiState.isUpdatePageVisible) {
-        UpdatePage(
-            onBack = { settingsViewModel.setUpdatePageVisible(false) },
-            bottomInnerPadding = bottomInnerPadding,
-        )
-        return
-    }
-
-    if (uiState.isAboutPageVisible) {
-        AboutPage(
-            onBack = { settingsViewModel.setAboutPageVisible(false) },
-            onOpenLicenses = { settingsViewModel.setLicensesPageVisible(true) },
-            bottomInnerPadding = bottomInnerPadding,
-        )
-        return
-    }
 
     val languageOptions = listOf(
         stringResource(R.string.language_system),
@@ -267,7 +222,7 @@ private fun SettingsPageMiuix(
                     title = stringResource(R.string.logs_title),
                     summary = stringResource(R.string.settings_logs_entry_desc),
                     startAction = { PreferenceIcon(AppIcons.Document) },
-                    onClick = { settingsViewModel.setLogsPageVisible(true) }
+                    onClick = onOpenLogs
                 )
             }
 
@@ -316,14 +271,14 @@ private fun SettingsPageMiuix(
                     summary = "v${BuildConfig.VERSION_NAME}",
                     startAction = { PreferenceIcon(AppIcons.Info) },
                     modifier = Modifier.testTag("settings_about_entry"),
-                    onClick = { settingsViewModel.setAboutPageVisible(true) }
+                    onClick = onOpenAbout
                 )
 
                 ArrowPreference(
                     title = stringResource(R.string.settings_update),
                     startAction = { PreferenceIcon(AppIcons.Update) },
                     modifier = Modifier.testTag("settings_update_entry"),
-                    onClick = { settingsViewModel.setUpdatePageVisible(true) }
+                    onClick = onOpenUpdate
                 )
             }
 

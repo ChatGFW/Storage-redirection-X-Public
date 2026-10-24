@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 
-// 轻量持久化工具，在 Activity 启动时初始化
+// 轻量持久化工具，在 Application 启动时初始化
 // 用于缓存设备信息和权限状态，避免每次启动重新加载导致 UI 闪烁
 object AppPreferences {
     private const val PREFS_NAME = "app_cache"

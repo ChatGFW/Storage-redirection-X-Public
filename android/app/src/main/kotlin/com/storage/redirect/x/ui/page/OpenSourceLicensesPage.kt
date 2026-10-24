@@ -1,6 +1,5 @@
 package com.storage.redirect.x.ui.page
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -127,8 +126,6 @@ fun OpenSourceLicensesPage(onBack: () -> Unit, bottomInnerPadding: Dp = 0.dp) {
     val onOpenUrl: (String) -> Unit = { url ->
         context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
     }
-
-    BackHandler(onBack = onBack)
 
     Column(modifier = Modifier.fillMaxSize()) {
         SrxTopAppBar(

@@ -15,4 +15,5 @@ object PreferenceKeys {
     const val FLOATING_BOTTOM_BAR_BLUR_ENABLED = "floating_bottom_bar_blur_enabled"
     const val PAGE_SCALE = "page_scale"
     const val ENABLE_BLUR = "enable_blur"
+    const val PREDICTIVE_BACK_ENABLED = "predictive_back_enabled"
 }

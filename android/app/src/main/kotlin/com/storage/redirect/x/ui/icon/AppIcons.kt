@@ -384,6 +384,13 @@ object AppIcons {
         )
     }
 
+    val SwipeHorizontal: ImageVector by lazy {
+        mingCute(
+            "body/finger_swipe",
+            stroke("M3 5.9991C3 5.9991 3.6434 5.11672 5 4.30905M14 3.79688C16.0422 4.68562 17 5.9991 17 5.9991M8 13V4.5C8 3.67157 8.67157 3 9.5 3C10.3284 3 11 3.67157 11 4.5V9.10496C11 9.61451 11.3831 10.0426 11.8896 10.0988L17.3313 10.7035C18.8506 10.8723 20 12.1565 20 13.6851V14C20 17.866 16.866 21 13 21H12.3262C9.67483 21 7.25099 19.502 6.06525 17.1305L3 11C5 10 6 10.5 8 13Z", StrokeCap.Round, StrokeJoin.Round),
+        )
+    }
+
     val Edit: ImageVector by lazy {
         mingCute(
             "editing/edit_2",

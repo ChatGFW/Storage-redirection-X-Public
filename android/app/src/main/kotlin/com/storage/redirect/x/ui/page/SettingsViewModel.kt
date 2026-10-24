@@ -19,10 +19,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class SettingsUiState(
-    val isLogsPageVisible: Boolean = false,
-    val isLicensesPageVisible: Boolean = false,
-    val isUpdatePageVisible: Boolean = false,
-    val isAboutPageVisible: Boolean = false,
     val hasRoot: Boolean? = null,
     val isWorking: Boolean = false,
     val isFuseFixerEnabled: Boolean = false,
@@ -65,22 +61,6 @@ class SettingsViewModel(
             val isEnabled = configRepo.readFuseFixerEnabled()
             _uiState.update { it.copy(isFuseFixerEnabled = isEnabled) }
         }
-    }
-
-    fun setLogsPageVisible(isVisible: Boolean) {
-        _uiState.update { it.copy(isLogsPageVisible = isVisible) }
-    }
-
-    fun setLicensesPageVisible(isVisible: Boolean) {
-        _uiState.update { it.copy(isLicensesPageVisible = isVisible) }
-    }
-
-    fun setUpdatePageVisible(isVisible: Boolean) {
-        _uiState.update { it.copy(isUpdatePageVisible = isVisible) }
-    }
-
-    fun setAboutPageVisible(isVisible: Boolean) {
-        _uiState.update { it.copy(isAboutPageVisible = isVisible) }
     }
 
     fun exportPackageConfigsZip(contentResolver: ContentResolver, outputUri: Uri) {

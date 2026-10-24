@@ -2,7 +2,6 @@ package com.storage.redirect.x.ui.page
 
 import android.content.Intent
 import androidx.core.net.toUri
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -65,8 +64,6 @@ fun UpdatePage(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val repo = remember { UpdateRepository() }
-
-    BackHandler(onBack = onBack)
 
     var checkOnLaunch by remember {
         mutableStateOf(AppPreferences.getBoolean(PreferenceKeys.CHECK_UPDATE_ON_LAUNCH, true))

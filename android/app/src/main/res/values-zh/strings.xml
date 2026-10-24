@@ -193,6 +193,8 @@
     <string name="settings_floating_bottom_bar_summary">启用悬浮在页面内容之上的底栏。</string>
     <string name="settings_floating_bottom_bar_blur">底栏模糊</string>
     <string name="settings_floating_bottom_bar_blur_summary">仅为悬浮底栏启用模糊效果。</string>
+    <string name="settings_predictive_back">预测性返回手势</string>
+    <string name="settings_predictive_back_summary">启用对预测性返回手势的支持</string>
     <string name="settings_fuse_fixer">FuseFixer</string>
     <string name="settings_fuse_fixer_summary">在 MediaProvider FUSE 路径校验中清理隐藏 Unicode 标记。</string>
     <string name="settings_tools">工具</string>

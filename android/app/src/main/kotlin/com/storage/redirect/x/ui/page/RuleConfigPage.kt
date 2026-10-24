@@ -3,7 +3,6 @@ package com.storage.redirect.x.ui.page
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +56,8 @@ import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.STATUS_WARNING_COLOR
 import com.storage.redirect.x.ui.component.SrxBackButton
 import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.navigation.PageStackHost
+import com.storage.redirect.x.ui.navigation.rememberPageStack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -89,7 +92,13 @@ private val RULE_CONFIG_DIALOG_BOTTOM_SPACING = 16.dp
 private val RULE_CONFIG_DIALOG_BUTTON_SPACING = 12.dp
 
 @Composable
-fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack: (modified: Boolean) -> Unit = {}) {
+fun RuleConfigPage(
+    packageName: String,
+    appName: String,
+    userId: Int = 0,
+    onBack: () -> Unit = {},
+    onModifiedExit: () -> Unit = {},
+) {
     val context = LocalContext.current
     val configRepo = remember { ConfigRepository() }
     val sharedUidRepo = remember { SharedUidRepository() }
@@ -225,9 +234,16 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
     val pathMappings = appConfig?.pathMappings ?: emptyList()
     val isRedirected = config.redirectApps.contains(packageName)
 
-    var browseRoute by remember { mutableStateOf<PathBrowseRoute?>(null) }
+    val browseStack = rememberPageStack<BrowseTarget>()
+    // 选择器打开期间对话框先隐藏，退出转场播完后再按原状态显示，避免弹窗窗口与转场抢帧
+    val isBrowsing = !browseStack.isEmpty
 
-    BackHandler(enabled = browseRoute == null) { onBack(hasModified) }
+    // 返回键、预测返回与顶栏返回都会让页面移出，统一在此通知上层刷新
+    val latestHasModified by rememberUpdatedState(hasModified)
+    val latestOnModifiedExit by rememberUpdatedState(onModifiedExit)
+    DisposableEffect(Unit) {
+        onDispose { if (latestHasModified) latestOnModifiedExit() }
+    }
 
     val decodedAppName = try {
         java.net.URLDecoder.decode(appName, "UTF-8")
@@ -246,296 +262,290 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
         }
     }
 
-    browseRoute?.let { route ->
-        PathBrowserPage(
-            browserRepository = pathBrowserRepo,
-            userId = userId,
-            packageName = if (route.target == BrowseTarget.MappingCurrentPath) packageName else null,
-            multiSelect = route.target == BrowseTarget.Path && pathDialogIndex == null,
-            allowExclude = route.target == BrowseTarget.Path,
-            isInitiallyExcluded = route.target == BrowseTarget.Path && dialogPathInput.trim().startsWith("!"),
-            onBack = {
-                // 恢复对话框 show 状态，弥补离开 composition 时的重置
-                when (route.target) {
-                    BrowseTarget.Path -> showPathDialog.value = route.isFromDialog
-                    BrowseTarget.MappingTargetPath, BrowseTarget.MappingCurrentPath ->
-                        showMappingDialog.value = true
-                }
-                browseRoute = null
-            },
-            onPathSelect = { selected ->
-                when (route.target) {
-                    BrowseTarget.Path -> {
-                        dialogPathInput = selected
-                        pathDialogErrorResId = null
-                        showPathDialog.value = true
-                    }
+    PageStackHost(
+        stack = browseStack,
+        page = { target, onBrowserBack ->
+            PathBrowserPage(
+                browserRepository = pathBrowserRepo,
+                userId = userId,
+                packageName = if (target == BrowseTarget.MappingCurrentPath) packageName else null,
+                multiSelect = target == BrowseTarget.Path && pathDialogIndex == null,
+                allowExclude = target == BrowseTarget.Path,
+                isInitiallyExcluded = target == BrowseTarget.Path && dialogPathInput.trim().startsWith("!"),
+                onBack = onBrowserBack,
+                onPathSelect = { selected ->
+                    when (target) {
+                        BrowseTarget.Path -> {
+                            dialogPathInput = selected
+                            pathDialogErrorResId = null
+                            showPathDialog.value = true
+                        }
 
-                    BrowseTarget.MappingTargetPath -> {
-                        dialogMappingFinalPathInput = selected
-                        mappingDialogErrorResId = null
-                        showMappingDialog.value = true
-                    }
+                        BrowseTarget.MappingTargetPath -> {
+                            dialogMappingFinalPathInput = selected
+                            mappingDialogErrorResId = null
+                            showMappingDialog.value = true
+                        }
 
-                    BrowseTarget.MappingCurrentPath -> {
-                        dialogMappingRequestPathInput = selected
-                        mappingDialogErrorResId = null
-                        showMappingDialog.value = true
+                        BrowseTarget.MappingCurrentPath -> {
+                            dialogMappingRequestPathInput = selected
+                            mappingDialogErrorResId = null
+                            showMappingDialog.value = true
+                        }
                     }
-                }
-                browseRoute = null
-            },
-            onPathsSelect = { paths ->
-                val validPaths = paths.mapNotNull { raw ->
-                    val validation = RedirectConfig.validateAllowedPath(raw)
-                    if (validation is PathValidationResult.Valid) validation.normalized else null
-                }
-                if (validPaths.isEmpty()) {
-                    pathDialogErrorResId = R.string.rule_config_browser_invalid_path
-                    showPathDialog.value = true
-                } else {
-                    var nextConfig = config
-                    for (path in validPaths) {
-                        nextConfig = nextConfig.addAllowedRealPath(packageName, path)
-                    }
-                    saveConfig(nextConfig)
-                    pathDialogErrorResId = null
-                    showPathDialog.value = false
-                    if (validPaths.size < paths.size) {
-                        Toast.makeText(context, R.string.rule_config_paths_partially_invalid, Toast.LENGTH_SHORT).show()
-                    }
-                }
-                browseRoute = null
-            },
-        )
-        return
-    }
-
-    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-    Scaffold(
-        topBar = {
-            SrxTopAppBar(
-                title = decodedAppName,
-                subtitle = packageName,
-                navigationIcon = { SrxBackButton(onClick = { onBack(hasModified) }) },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            clearTemplateSelection()
-                            templates = templateRepo.loadTemplates()
-                            showTemplatePicker.value = true
-                        },
-                        enabled = !isLoading,
-                        modifier = Modifier.testTag("rule_config_apply_template"),
-                    ) {
-                        Icon(
-                            AppIcons.Paste,
-                            contentDescription = stringResource(R.string.apps_apply_template),
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            if (allowedPaths.isEmpty() && pathMappings.isEmpty()) {
-                                Toast.makeText(context, R.string.apps_template_save_failed_empty, Toast.LENGTH_SHORT).show()
-                                return@IconButton
-                            }
-                            saveTemplateNameInput = decodedAppName
-                            saveTemplateNameError = false
-                            showSaveTemplateDialog.value = true
-                        },
-                        modifier = Modifier.testTag("rule_config_save_as_template"),
-                    ) {
-                        Icon(
-                            AppIcons.Save,
-                            contentDescription = stringResource(R.string.apps_save_as_template),
-                        )
-                    }
+                    onBrowserBack()
                 },
-                scrollBehavior = scrollBehavior,
+                onPathsSelect = { paths ->
+                    val validPaths = paths.mapNotNull { raw ->
+                        val validation = RedirectConfig.validateAllowedPath(raw)
+                        if (validation is PathValidationResult.Valid) validation.normalized else null
+                    }
+                    if (validPaths.isEmpty()) {
+                        pathDialogErrorResId = R.string.rule_config_browser_invalid_path
+                        showPathDialog.value = true
+                    } else {
+                        var nextConfig = config
+                        for (path in validPaths) {
+                            nextConfig = nextConfig.addAllowedRealPath(packageName, path)
+                        }
+                        saveConfig(nextConfig)
+                        pathDialogErrorResId = null
+                        showPathDialog.value = false
+                        if (validPaths.size < paths.size) {
+                            Toast.makeText(context, R.string.rule_config_paths_partially_invalid, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    onBrowserBack()
+                },
             )
-        }
-    ) { padding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+        },
+    ) {
+        val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
+        Scaffold(
+            topBar = {
+                SrxTopAppBar(
+                    title = decodedAppName,
+                    subtitle = packageName,
+                    navigationIcon = { SrxBackButton(onClick = onBack) },
+                    actions = {
+                        IconButton(
+                            onClick = {
+                                clearTemplateSelection()
+                                templates = templateRepo.loadTemplates()
+                                showTemplatePicker.value = true
+                            },
+                            enabled = !isLoading,
+                            modifier = Modifier.testTag("rule_config_apply_template"),
+                        ) {
+                            Icon(
+                                AppIcons.Paste,
+                                contentDescription = stringResource(R.string.apps_apply_template),
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                if (allowedPaths.isEmpty() && pathMappings.isEmpty()) {
+                                    Toast.makeText(context, R.string.apps_template_save_failed_empty, Toast.LENGTH_SHORT).show()
+                                    return@IconButton
+                                }
+                                saveTemplateNameInput = decodedAppName
+                                saveTemplateNameError = false
+                                showSaveTemplateDialog.value = true
+                            },
+                            modifier = Modifier.testTag("rule_config_save_as_template"),
+                        ) {
+                            Icon(
+                                AppIcons.Save,
+                                contentDescription = stringResource(R.string.apps_save_as_template),
+                            )
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
             }
-            return@Scaffold
-        }
+        ) { padding ->
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+                return@Scaffold
+            }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            LazyColumn(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .padding(horizontal = PAGE_HORIZONTAL_PADDING)
+                    .padding(padding)
             ) {
-                // 重定向开关，带应用图标
-                item {
-                    Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        SwitchPreference(
-                            title = stringResource(R.string.rule_config_enable_redirect),
-                            summary = if (isRedirected) stringResource(R.string.rule_config_redirect_enabled)
-                            else stringResource(R.string.rule_config_redirect_disabled),
-                            checked = isRedirected,
-                            startAction = {
-                                AppIcon(
-                                    drawable = appIcon,
-                                    modifier = Modifier
-                                        .padding(end = RULE_CONFIG_APP_ICON_END_PADDING)
-                                        .size(RULE_CONFIG_APP_ICON_SIZE),
-                                    placeholderColor = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                                )
-                            },
-                            onCheckedChange = { enabled ->
-                                val newConfig = if (enabled) config.addApp(packageName)
-                                else config.removeApp(packageName)
-                                saveConfig(newConfig)
-                            }
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection)
+                        .padding(horizontal = PAGE_HORIZONTAL_PADDING)
+                ) {
+                    // 重定向开关，带应用图标
+                    item {
+                        Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            SwitchPreference(
+                                title = stringResource(R.string.rule_config_enable_redirect),
+                                summary = if (isRedirected) stringResource(R.string.rule_config_redirect_enabled)
+                                else stringResource(R.string.rule_config_redirect_disabled),
+                                checked = isRedirected,
+                                startAction = {
+                                    AppIcon(
+                                        drawable = appIcon,
+                                        modifier = Modifier
+                                            .padding(end = RULE_CONFIG_APP_ICON_END_PADDING)
+                                            .size(RULE_CONFIG_APP_ICON_SIZE),
+                                        placeholderColor = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    )
+                                },
+                                onCheckedChange = { enabled ->
+                                    val newConfig = if (enabled) config.addApp(packageName)
+                                    else config.removeApp(packageName)
+                                    saveConfig(newConfig)
+                                }
+                            )
+                        }
+                    }
+
+                    // 共享 UID 提示
+                    if (sharedPackages.isNotEmpty()) {
+                        item {
+                            Spacer(Modifier.height(PAGE_ITEM_GAP))
+                            SharedUidCard(sharedPackages)
+                        }
+                    }
+
+                    // 允许访问路径：规则说明收进标题右侧 ⓘ，添加与浏览固定在卡片底部
+                    item {
+                        RuleSectionTitle(
+                            title = stringResource(
+                                R.string.rule_config_section_count,
+                                stringResource(R.string.rule_config_allowed_paths),
+                                allowedPaths.size,
+                            ),
+                            onInfo = { showAllowedPathHint = !showAllowedPathHint },
                         )
                     }
-                }
-
-                // 共享 UID 提示
-                if (sharedPackages.isNotEmpty()) {
+                    item { AllowedPathHintCard(showAllowedPathHint) }
                     item {
-                        Spacer(Modifier.height(PAGE_ITEM_GAP))
-                        SharedUidCard(sharedPackages)
-                    }
-                }
-
-                // 允许访问路径：规则说明收进标题右侧 ⓘ，添加与浏览固定在卡片底部
-                item {
-                    RuleSectionTitle(
-                        title = stringResource(
-                            R.string.rule_config_section_count,
-                            stringResource(R.string.rule_config_allowed_paths),
-                            allowedPaths.size,
-                        ),
-                        onInfo = { showAllowedPathHint = !showAllowedPathHint },
-                    )
-                }
-                item { AllowedPathHintCard(showAllowedPathHint) }
-                item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        if (allowedPaths.isEmpty()) {
-                            RuleEmptyRow(stringResource(R.string.rule_config_no_paths))
-                        }
-                        allowedPaths.forEachIndexed { index, path ->
-                            AllowedPathRow(
-                                path = path,
-                                onClick = {
-                                    pathDialogIndex = index
-                                    dialogPathInput = path
-                                    pathDialogErrorResId = null
-                                    showPathDialog.value = true
-                                },
-                                onDelete = {
-                                    deleteTarget = DeleteTarget.Path(index)
-                                    showDeleteDialog.value = true
-                                },
-                            )
-                        }
-                        CardActionRow {
-                            CardActionButton(
-                                icon = AppIcons.Add,
-                                text = stringResource(R.string.rule_config_add_path),
-                                onClick = {
-                                    pathDialogIndex = null
-                                    dialogPathInput = ""
-                                    pathDialogErrorResId = null
-                                    showPathDialog.value = true
-                                },
-                                modifier = Modifier.testTag("rule_config_add_path"),
-                            )
-                            VerticalDivider(
-                                modifier = Modifier.padding(vertical = RULE_CONFIG_ACTION_DIVIDER_PADDING),
-                                color = MiuixTheme.colorScheme.dividerLine,
-                            )
-                            CardActionButton(
-                                icon = AppIcons.Folder,
-                                text = stringResource(R.string.rule_config_browse),
-                                onClick = {
-                                    pathDialogIndex = null
-                                    dialogPathInput = ""
-                                    pathDialogErrorResId = null
-                                    browseRoute = PathBrowseRoute(BrowseTarget.Path, isFromDialog = false)
-                                },
-                                modifier = Modifier.testTag("rule_config_browse_paths"),
-                            )
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            if (allowedPaths.isEmpty()) {
+                                RuleEmptyRow(stringResource(R.string.rule_config_no_paths))
+                            }
+                            allowedPaths.forEachIndexed { index, path ->
+                                AllowedPathRow(
+                                    path = path,
+                                    onClick = {
+                                        pathDialogIndex = index
+                                        dialogPathInput = path
+                                        pathDialogErrorResId = null
+                                        showPathDialog.value = true
+                                    },
+                                    onDelete = {
+                                        deleteTarget = DeleteTarget.Path(index)
+                                        showDeleteDialog.value = true
+                                    },
+                                )
+                            }
+                            CardActionRow {
+                                CardActionButton(
+                                    icon = AppIcons.Add,
+                                    text = stringResource(R.string.rule_config_add_path),
+                                    onClick = {
+                                        pathDialogIndex = null
+                                        dialogPathInput = ""
+                                        pathDialogErrorResId = null
+                                        showPathDialog.value = true
+                                    },
+                                    modifier = Modifier.testTag("rule_config_add_path"),
+                                )
+                                VerticalDivider(
+                                    modifier = Modifier.padding(vertical = RULE_CONFIG_ACTION_DIVIDER_PADDING),
+                                    color = MiuixTheme.colorScheme.dividerLine,
+                                )
+                                CardActionButton(
+                                    icon = AppIcons.Folder,
+                                    text = stringResource(R.string.rule_config_browse),
+                                    onClick = {
+                                        pathDialogIndex = null
+                                        dialogPathInput = ""
+                                        pathDialogErrorResId = null
+                                        browseStack.push(BrowseTarget.Path)
+                                    },
+                                    modifier = Modifier.testTag("rule_config_browse_paths"),
+                                )
+                            }
                         }
                     }
-                }
 
-                // 路径映射
-                item {
-                    RuleSectionTitle(
-                        title = stringResource(
-                            R.string.rule_config_section_count,
-                            stringResource(R.string.rule_config_path_mappings),
-                            pathMappings.size,
-                        ),
-                    )
-                }
-                item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        if (pathMappings.isEmpty()) {
-                            RuleEmptyRow(stringResource(R.string.rule_config_no_mappings))
-                        }
-                        pathMappings.forEachIndexed { index, mapping ->
-                            PathMappingRow(
-                                requestPath = mapping.requestPath,
-                                finalPath = mapping.finalPath,
-                                onClick = {
-                                    mappingDialogIndex = index
-                                    dialogMappingRequestPathInput = mapping.requestPath
-                                    dialogMappingFinalPathInput = mapping.finalPath
-                                    mappingDialogErrorResId = null
-                                    showMappingDialog.value = true
-                                },
-                                onDelete = {
-                                    deleteTarget = DeleteTarget.Mapping(index)
-                                    showDeleteDialog.value = true
-                                },
-                            )
-                        }
-                        CardActionRow {
-                            CardActionButton(
-                                icon = AppIcons.Add,
-                                text = stringResource(R.string.rule_config_add_mapping),
-                                onClick = {
-                                    mappingDialogIndex = null
-                                    dialogMappingRequestPathInput = ""
-                                    dialogMappingFinalPathInput = ""
-                                    mappingDialogErrorResId = null
-                                    showMappingDialog.value = true
-                                },
-                                modifier = Modifier.testTag("rule_config_add_mapping"),
-                            )
+                    // 路径映射
+                    item {
+                        RuleSectionTitle(
+                            title = stringResource(
+                                R.string.rule_config_section_count,
+                                stringResource(R.string.rule_config_path_mappings),
+                                pathMappings.size,
+                            ),
+                        )
+                    }
+                    item {
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            if (pathMappings.isEmpty()) {
+                                RuleEmptyRow(stringResource(R.string.rule_config_no_mappings))
+                            }
+                            pathMappings.forEachIndexed { index, mapping ->
+                                PathMappingRow(
+                                    requestPath = mapping.requestPath,
+                                    finalPath = mapping.finalPath,
+                                    onClick = {
+                                        mappingDialogIndex = index
+                                        dialogMappingRequestPathInput = mapping.requestPath
+                                        dialogMappingFinalPathInput = mapping.finalPath
+                                        mappingDialogErrorResId = null
+                                        showMappingDialog.value = true
+                                    },
+                                    onDelete = {
+                                        deleteTarget = DeleteTarget.Mapping(index)
+                                        showDeleteDialog.value = true
+                                    },
+                                )
+                            }
+                            CardActionRow {
+                                CardActionButton(
+                                    icon = AppIcons.Add,
+                                    text = stringResource(R.string.rule_config_add_mapping),
+                                    onClick = {
+                                        mappingDialogIndex = null
+                                        dialogMappingRequestPathInput = ""
+                                        dialogMappingFinalPathInput = ""
+                                        mappingDialogErrorResId = null
+                                        showMappingDialog.value = true
+                                    },
+                                    modifier = Modifier.testTag("rule_config_add_mapping"),
+                                )
+                            }
                         }
                     }
-                }
 
-                // 提示信息
-                item {
-                    Text(
-                        text = stringResource(R.string.rule_config_restart_hint),
-                        modifier = Modifier.padding(
-                            start = RULE_CONFIG_CARD_CONTENT_PADDING,
-                            end = RULE_CONFIG_CARD_CONTENT_PADDING,
-                            top = PAGE_GROUP_GAP,
-                            bottom = PAGE_GROUP_GAP,
-                        ),
-                        fontSize = 13.sp,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    )
+                    // 提示信息
+                    item {
+                        Text(
+                            text = stringResource(R.string.rule_config_restart_hint),
+                            modifier = Modifier.padding(
+                                start = RULE_CONFIG_CARD_CONTENT_PADDING,
+                                end = RULE_CONFIG_CARD_CONTENT_PADDING,
+                                top = PAGE_GROUP_GAP,
+                                bottom = PAGE_GROUP_GAP,
+                            ),
+                            fontSize = 13.sp,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
                 }
             }
         }
@@ -544,7 +554,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
     // 路径添加/编辑弹窗（合并）
     val isEditingPath = pathDialogIndex != null
     WindowDialog(
-        show = showPathDialog.value,
+        show = showPathDialog.value && !isBrowsing,
         title = stringResource(
             if (isEditingPath) R.string.rule_config_edit_path else R.string.rule_config_add_path
         ),
@@ -560,7 +570,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                 pathDialogErrorResId = null
             },
             label = stringResource(R.string.rule_config_real_path),
-            onBrowse = { browseRoute = PathBrowseRoute(BrowseTarget.Path) },
+            onBrowse = { browseStack.push(BrowseTarget.Path) },
         )
         pathDialogErrorResId?.let { errorResId ->
             Spacer(Modifier.height(RULE_CONFIG_DIALOG_FIELD_SPACING))
@@ -627,7 +637,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
     // 映射添加/编辑弹窗（合并）
     val isEditingMapping = mappingDialogIndex != null
     WindowDialog(
-        show = showMappingDialog.value,
+        show = showMappingDialog.value && !isBrowsing,
         title = stringResource(
             if (isEditingMapping) R.string.rule_config_edit_mapping else R.string.rule_config_add_mapping
         ),
@@ -644,7 +654,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                 mappingDialogErrorResId = null
             },
             label = stringResource(R.string.rule_config_mapping_request_path),
-            onBrowse = { browseRoute = PathBrowseRoute(BrowseTarget.MappingCurrentPath) },
+            onBrowse = { browseStack.push(BrowseTarget.MappingCurrentPath) },
         )
         MappingDirectionArrow()
         RulePathField(
@@ -654,7 +664,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                 mappingDialogErrorResId = null
             },
             label = stringResource(R.string.rule_config_mapping_final_path),
-            onBrowse = { browseRoute = PathBrowseRoute(BrowseTarget.MappingTargetPath) },
+            onBrowse = { browseStack.push(BrowseTarget.MappingTargetPath) },
         )
         mappingDialogErrorResId?.let { errorResId ->
             Spacer(Modifier.height(RULE_CONFIG_DIALOG_FIELD_SPACING))
@@ -923,12 +933,6 @@ private enum class BrowseTarget {
     MappingTargetPath,
     MappingCurrentPath,
 }
-
-// 从卡片底部直接浏览时，返回不再弹出添加路径对话框
-private data class PathBrowseRoute(
-    val target: BrowseTarget,
-    val isFromDialog: Boolean = true,
-)
 
 // 弹窗按钮行
 @Composable

@@ -2,7 +2,7 @@ package com.storage.redirect.x.ui.page
 
 import android.annotation.SuppressLint
 import android.os.Build
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -46,6 +47,8 @@ import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 import com.storage.redirect.x.R
+import com.storage.redirect.x.data.cache.AppPreferences
+import com.storage.redirect.x.data.cache.PreferenceKeys
 import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.SrxBackButton
@@ -57,6 +60,7 @@ import com.storage.redirect.x.ui.theme.ColorMode
 import com.storage.redirect.x.ui.theme.keyColorOptions
 import com.storage.redirect.x.ui.util.LocalTopBarBackdrop
 import com.storage.redirect.x.ui.util.rememberTopBarBackdrop
+import com.storage.redirect.x.util.PredictiveBackSupport
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -80,12 +84,14 @@ fun ColorPalettePageMiuix(
     onBack: () -> Unit,
     bottomInnerPadding: Dp = 0.dp,
 ) {
-    BackHandler(onBack = onBack)
-
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
     val backdrop = rememberTopBarBackdrop(themeSettings.enableBlur)
     val colorMode = themeSettings.colorMode
     val isDark = colorMode.isDark || colorMode.isSystem && isSystemInDarkTheme()
+    val activity = LocalActivity.current
+    var isPredictiveBackEnabled by remember {
+        mutableStateOf(AppPreferences.getBoolean(PreferenceKeys.PREDICTIVE_BACK_ENABLED))
+    }
 
     Scaffold(
         topBar = {
@@ -272,6 +278,30 @@ fun ColorPalettePageMiuix(
                                     onBottomBarAppearanceChange(bottomBarAppearance.copy(isFloatingBottomBarBlurEnabled = enabled))
                                 },
                                 enabled = bottomBarAppearance.isBlurSwitchEnabled,
+                            )
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            SwitchPreference(
+                                modifier = Modifier.testTag("switch_theme_predictive_back"),
+                                title = stringResource(R.string.settings_predictive_back),
+                                summary = stringResource(R.string.settings_predictive_back_summary),
+                                startAction = {
+                                    Icon(
+                                        AppIcons.SwipeHorizontal,
+                                        modifier = Modifier.padding(end = 6.dp),
+                                        contentDescription = null,
+                                        tint = colorScheme.onBackground,
+                                    )
+                                },
+                                checked = isPredictiveBackEnabled,
+                                onCheckedChange = { enabled ->
+                                    // 窗口只在创建时读取该标记，切换后重建 Activity 才生效
+                                    if (activity != null && PredictiveBackSupport.setEnabled(activity.applicationInfo, enabled)) {
+                                        isPredictiveBackEnabled = enabled
+                                        AppPreferences.put(PreferenceKeys.PREDICTIVE_BACK_ENABLED, enabled)
+                                        activity.recreate()
+                                    }
+                                },
                             )
                         }
                     }

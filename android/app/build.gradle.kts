@@ -103,3 +103,13 @@ dependencies {
 
     testImplementation(libs.junit4)
 }
+
+// navigationevent 1.1.2 会丢失预测返回手势进度，固定到已修复的 1.2，正式版发布后移除
+configurations.all {
+    resolutionStrategy {
+        force("androidx.navigationevent:navigationevent:1.2.0-rc01")
+        force("androidx.navigationevent:navigationevent-android:1.2.0-rc01")
+        force("androidx.navigationevent:navigationevent-compose:1.2.0-rc01")
+        force("androidx.navigationevent:navigationevent-compose-android:1.2.0-rc01")
+    }
+}

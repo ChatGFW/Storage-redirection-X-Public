@@ -1,7 +1,6 @@
 package com.storage.redirect.x.ui.page
 
 import android.content.Intent
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -61,7 +60,6 @@ fun AboutPage(
     bottomInnerPadding: Dp = 0.dp,
 ) {
     val context = LocalContext.current
-    BackHandler(onBack = onBack)
 
     FlowLightBackground(modifier = Modifier.fillMaxSize().testTag("page_about")) {
         Column(modifier = Modifier.fillMaxSize()) {

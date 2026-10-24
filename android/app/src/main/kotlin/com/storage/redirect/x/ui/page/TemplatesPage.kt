@@ -1,6 +1,5 @@
 package com.storage.redirect.x.ui.page
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -40,6 +39,8 @@ import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.SrxBackButton
 import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.navigation.PageStackHost
+import com.storage.redirect.x.ui.navigation.rememberPageStack
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -64,7 +65,8 @@ private val TEMPLATE_DIALOG_BUTTON_SPACING = 12.dp
 fun TemplatesPage(onBack: () -> Unit = {}) {
     val templateRepo = remember { TemplateRepository() }
     var templates by remember { mutableStateOf(templateRepo.loadTemplates()) }
-    var editingTemplate by remember { mutableStateOf<RedirectTemplate?>(null) }
+    // 路由为模板 id
+    val editorStack = rememberPageStack<String>()
     val showNameDialog = remember { mutableStateOf(false) }
     var nameDialogInput by remember { mutableStateOf("") }
     var nameDialogError by remember { mutableStateOf(false) }
@@ -73,83 +75,34 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
         templates = newTemplates
     }
 
-    editingTemplate?.let { template ->
-        TemplateEditorPage(
-            template = template,
-            onTemplateChange = { updated ->
-                val saved = templateRepo.saveTemplate(updated)
-                refresh(saved)
-                editingTemplate = updated.normalized()
-            },
-            onDelete = {
-                refresh(templateRepo.deleteTemplate(template.id))
-                editingTemplate = null
-            },
-            onBack = { editingTemplate = null },
-        )
-        return
-    }
-
-    BackHandler { onBack() }
-    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-
-    Scaffold(
-        modifier = Modifier.testTag("page_templates"),
-        topBar = {
-            SrxTopAppBar(
-                title = stringResource(R.string.templates_title),
-                navigationIcon = {
-                    SrxBackButton(onClick = onBack, modifier = Modifier.testTag("templates_back_button"))
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            nameDialogInput = ""
-                            nameDialogError = false
-                            showNameDialog.value = true
-                        },
-                        modifier = Modifier.testTag("templates_add_button"),
-                    ) {
-                        Icon(
-                            AppIcons.Add,
-                            contentDescription = stringResource(R.string.templates_add),
-                            tint = MiuixTheme.colorScheme.primary,
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
-        },
-    ) { padding ->
-        if (templates.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = PAGE_HORIZONTAL_PADDING),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.templates_empty),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+    PageStackHost(
+        stack = editorStack,
+        page = { templateId, onEditorBack ->
+            // 只取打开时的内容，编辑页自行维护后续修改；删除后的退出转场仍有内容可画
+            val template = remember(templateId) { templates.firstOrNull { it.id == templateId } }
+            template?.let {
+                TemplateEditorPage(
+                    template = it,
+                    onTemplateChange = { updated -> refresh(templateRepo.saveTemplate(updated)) },
+                    onDelete = {
+                        refresh(templateRepo.deleteTemplate(templateId))
+                        onEditorBack()
+                    },
+                    onBack = onEditorBack,
                 )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .padding(horizontal = PAGE_HORIZONTAL_PADDING),
-            ) {
-                item { Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING)) }
-                items(templates, key = { it.id }) { template ->
-                    TemplateCard(template = template, onClick = { editingTemplate = template })
-                    Spacer(Modifier.height(PAGE_ITEM_GAP))
-                }
-                item { Spacer(Modifier.height(PAGE_GROUP_GAP)) }
-            }
-        }
+        },
+    ) {
+        TemplateListContent(
+            templates = templates,
+            onBack = onBack,
+            onAdd = {
+                nameDialogInput = ""
+                nameDialogError = false
+                showNameDialog.value = true
+            },
+            onOpen = { template -> editorStack.push(template.id) },
+        )
     }
 
     WindowDialog(
@@ -190,10 +143,74 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                 val template = RedirectTemplate(name = name).normalized()
                 val saved = templateRepo.saveTemplate(template)
                 refresh(saved)
-                editingTemplate = template
+                editorStack.push(template.id)
                 true
             },
         )
+    }
+}
+
+@Composable
+private fun TemplateListContent(
+    templates: List<RedirectTemplate>,
+    onBack: () -> Unit,
+    onAdd: () -> Unit,
+    onOpen: (RedirectTemplate) -> Unit,
+) {
+    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
+    Scaffold(
+        modifier = Modifier.testTag("page_templates"),
+        topBar = {
+            SrxTopAppBar(
+                title = stringResource(R.string.templates_title),
+                navigationIcon = {
+                    SrxBackButton(onClick = onBack, modifier = Modifier.testTag("templates_back_button"))
+                },
+                actions = {
+                    IconButton(
+                        onClick = onAdd,
+                        modifier = Modifier.testTag("templates_add_button"),
+                    ) {
+                        Icon(
+                            AppIcons.Add,
+                            contentDescription = stringResource(R.string.templates_add),
+                            tint = MiuixTheme.colorScheme.primary,
+                        )
+                    }
+                },
+                scrollBehavior = scrollBehavior,
+            )
+        },
+    ) { padding ->
+        if (templates.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = PAGE_HORIZONTAL_PADDING),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.templates_empty),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
+                    .padding(horizontal = PAGE_HORIZONTAL_PADDING),
+            ) {
+                item { Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING)) }
+                items(templates, key = { it.id }) { template ->
+                    TemplateCard(template = template, onClick = { onOpen(template) })
+                    Spacer(Modifier.height(PAGE_ITEM_GAP))
+                }
+                item { Spacer(Modifier.height(PAGE_GROUP_GAP)) }
+            }
+        }
     }
 }
 
@@ -230,7 +247,6 @@ private fun TemplateEditorPage(
         onTemplateChange(currentTemplate)
     }
 
-    BackHandler { onBack() }
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
 
     Scaffold(

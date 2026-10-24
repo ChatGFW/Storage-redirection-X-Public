@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -25,6 +24,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -56,14 +56,22 @@ import com.storage.redirect.x.ui.component.bottombar.BottomBarAppearanceState
 import com.storage.redirect.x.ui.component.bottombar.FloatingBottomBar
 import com.storage.redirect.x.ui.component.bottombar.FloatingBottomBarTab
 import com.storage.redirect.x.ui.icon.AppIcons
+import com.storage.redirect.x.ui.navigation.AppPage
+import com.storage.redirect.x.ui.navigation.PageStackHost
+import com.storage.redirect.x.ui.navigation.rememberPageStack
 import com.storage.redirect.x.ui.navigation.rememberRootNavigationState
+import com.storage.redirect.x.ui.page.AboutPage
 import com.storage.redirect.x.ui.page.AppsPage
+import com.storage.redirect.x.ui.page.ColorPalettePage
 import com.storage.redirect.x.ui.page.FileMonitorPage
 import com.storage.redirect.x.ui.page.HomePage
+import com.storage.redirect.x.ui.page.LogsPage
+import com.storage.redirect.x.ui.page.OpenSourceLicensesPage
 import com.storage.redirect.x.ui.page.PermissionPage
 import com.storage.redirect.x.ui.page.RuleConfigPage
 import com.storage.redirect.x.ui.page.SettingsPage
 import com.storage.redirect.x.ui.page.TemplatesPage
+import com.storage.redirect.x.ui.page.UpdatePage
 import com.storage.redirect.x.ui.theme.AppTheme
 import com.storage.redirect.x.ui.theme.AppThemeController
 import com.storage.redirect.x.ui.theme.AppThemeSettings
@@ -80,9 +88,6 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private const val KEY_PERMISSION_GRANTED = "permission_granted"
 private val FLOATING_BOTTOM_BAR_OVERLAY_PADDING = 76.dp
-
-// Detail 页面路由
-data class DetailRoute(val packageName: String, val appName: String, val userId: Int)
 
 @Composable
 fun App(
@@ -149,8 +154,7 @@ fun App(
             return@AppTheme
         }
 
-        var detailRoute by remember { mutableStateOf<DetailRoute?>(null) }
-        var isTemplatesPageVisible by remember { mutableStateOf(false) }
+        val pageStack = rememberPageStack<AppPage>()
         // 从配置页返回时递增，驱动应用列表刷新配置
         var configVersion by remember { mutableIntStateOf(0) }
         var bottomBarAppearance by remember {
@@ -161,9 +165,10 @@ fun App(
         // 应用页批量选择时由页内批量栏接管底部，隐藏底栏并锁定左右滑动
         var isAppsBatchMode by remember { mutableStateOf(false) }
 
-        fun closeDetail(modified: Boolean) {
-            detailRoute = null
-            if (modified) configVersion++
+        fun updateBottomBarAppearance(state: BottomBarAppearanceState) {
+            bottomBarAppearance = state
+            AppPreferences.put(PreferenceKeys.FLOATING_BOTTOM_BAR_ENABLED, state.isFloatingBottomBarEnabled)
+            AppPreferences.put(PreferenceKeys.FLOATING_BOTTOM_BAR_BLUR_ENABLED, state.isFloatingBottomBarBlurEnabled)
         }
 
         // 底栏导航项
@@ -207,6 +212,7 @@ fun App(
             val page = pendingDebugPage ?: return@LaunchedEffect
             val index = navKeys.indexOf(page)
             if (index >= 0) {
+                pageStack.clear()
                 rootNavigation.animateTo(index)
             }
             onDebugPageConsumed()
@@ -228,9 +234,43 @@ fun App(
         } else {
             0.dp
         }
+        // 二级页面覆盖底栏，底部只需避让系统导航栏
+        val navigationBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-        Box(
+        PageStackHost(
+            stack = pageStack,
             modifier = Modifier.semantics { testTagsAsResourceId = true },
+            page = { route, onBack ->
+                when (route) {
+                    AppPage.Templates -> {
+                        // 模板可能被改动，关闭后刷新应用列表里的模板与配置
+                        DisposableEffect(Unit) { onDispose { configVersion++ } }
+                        TemplatesPage(onBack = onBack)
+                    }
+                    is AppPage.RuleConfig -> RuleConfigPage(
+                        packageName = route.packageName,
+                        appName = route.appName,
+                        userId = route.userId,
+                        onBack = onBack,
+                        onModifiedExit = { configVersion++ },
+                    )
+                    AppPage.Theme -> ColorPalettePage(
+                        themeSettings = themeSettings,
+                        onThemeSettingsChange = ::updateThemeSettings,
+                        bottomBarAppearance = bottomBarAppearance,
+                        onBottomBarAppearanceChange = ::updateBottomBarAppearance,
+                        onBack = onBack,
+                    )
+                    AppPage.Logs -> LogsPage(onBack = onBack, bottomInnerPadding = navigationBarsBottom)
+                    AppPage.About -> AboutPage(
+                        onBack = onBack,
+                        onOpenLicenses = { pageStack.push(AppPage.Licenses) },
+                        bottomInnerPadding = navigationBarsBottom,
+                    )
+                    AppPage.Licenses -> OpenSourceLicensesPage(onBack = onBack, bottomInnerPadding = navigationBarsBottom)
+                    AppPage.Update -> UpdatePage(onBack = onBack, bottomInnerPadding = navigationBarsBottom)
+                }
+            },
         ) {
             Scaffold(
                 bottomBar = {
@@ -274,34 +314,25 @@ fun App(
                                 0 -> HomePage(
                                     themeMode = themeSettings.colorMode.value,
                                     bottomInnerPadding = overlayBottomPadding,
-                                    onTemplatesClick = { isTemplatesPageVisible = true },
+                                    onTemplatesClick = { pageStack.push(AppPage.Templates) },
+                                    onLogsClick = { pageStack.push(AppPage.Logs) },
                                 )
                                 1 -> AppsPage(
                                     onAppClick = { packageName, appName, userId ->
-                                        detailRoute = DetailRoute(packageName, appName, userId)
+                                        pageStack.push(AppPage.RuleConfig(packageName, appName, userId))
                                     },
                                     configVersion = configVersion,
                                     bottomInnerPadding = overlayBottomPadding,
                                     onMenuStateChange = { isAnyMenuOpen = it },
                                     onBatchModeChange = { isAppsBatchMode = it },
-                                    onTemplatesClick = { isTemplatesPageVisible = true },
+                                    onTemplatesClick = { pageStack.push(AppPage.Templates) },
                                 )
                                 2 -> FileMonitorPage(bottomInnerPadding = overlayBottomPadding)
                                 3 -> SettingsPage(
-                                    themeSettings = themeSettings,
-                                    onThemeSettingsChange = ::updateThemeSettings,
-                                    bottomBarAppearance = bottomBarAppearance,
-                                    onBottomBarAppearanceChange = { state ->
-                                        bottomBarAppearance = state
-                                        AppPreferences.put(
-                                            PreferenceKeys.FLOATING_BOTTOM_BAR_ENABLED,
-                                            state.isFloatingBottomBarEnabled,
-                                        )
-                                        AppPreferences.put(
-                                            PreferenceKeys.FLOATING_BOTTOM_BAR_BLUR_ENABLED,
-                                            state.isFloatingBottomBarBlurEnabled,
-                                        )
-                                    },
+                                    onOpenTheme = { pageStack.push(AppPage.Theme) },
+                                    onOpenLogs = { pageStack.push(AppPage.Logs) },
+                                    onOpenAbout = { pageStack.push(AppPage.About) },
+                                    onOpenUpdate = { pageStack.push(AppPage.Update) },
                                     bottomInnerPadding = overlayBottomPadding,
                                 )
                             }
@@ -364,22 +395,6 @@ fun App(
                         }
                     }
                 }
-            }
-
-            if (isTemplatesPageVisible) {
-                TemplatesPage(onBack = {
-                    isTemplatesPageVisible = false
-                    configVersion++
-                })
-            }
-
-            detailRoute?.let { route ->
-                RuleConfigPage(
-                    packageName = route.packageName,
-                    appName = route.appName,
-                    userId = route.userId,
-                    onBack = { modified -> closeDetail(modified) }
-                )
             }
         }
     }

@@ -194,6 +194,8 @@
     <string name="settings_floating_bottom_bar_summary">Use a floating bottom bar that overlays page content.</string>
     <string name="settings_floating_bottom_bar_blur">Bottom bar blur</string>
     <string name="settings_floating_bottom_bar_blur_summary">Enable blur effect only for the floating bottom bar.</string>
+    <string name="settings_predictive_back">Predictive back gesture</string>
+    <string name="settings_predictive_back_summary">Enable predictive back gesture support</string>
     <string name="settings_fuse_fixer">FuseFixer</string>
     <string name="settings_fuse_fixer_summary">Normalize hidden Unicode marks in MediaProvider FUSE path checks.</string>
     <string name="settings_tools">Tools</string>
