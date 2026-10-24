@@ -1,6 +1,5 @@
 package com.storage.redirect.x.ui.page.pathbrowser
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,7 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,60 +20,64 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.icon.AppIcons
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
+private val DIRECTORY_GROUP_CORNER_RADIUS = 16.dp
+private val DIRECTORY_ROW_MIN_HEIGHT = 60.dp
+private val DIRECTORY_ICON_SIZE = 34.dp
+
 @Composable
-internal fun BrowserDirectoryList(state: PathBrowserState, modifier: Modifier = Modifier) {
+internal fun BrowserDirectoryList(state: PathBrowserState, bottomPadding: Dp) {
     val entries = state.visibleDirectories
     val listState = rememberLazyListState()
     LaunchedEffect(state.currentPath, state.query, state.showHidden, state.isDescending) {
         listState.scrollToItem(0)
     }
-    Column(modifier) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BrowserText(
-                stringResource(R.string.browser_directory_count, entries.size),
-                color = browserColors().summary, fontSize = 12.sp,
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                BrowserText(
-                    stringResource(if (state.isDescending) R.string.browser_sort_descending else R.string.browser_sort_ascending),
-                    color = browserColors().summary, fontSize = 12.sp,
-                )
-                IconButton(onClick = { state.isDescending = !state.isDescending }) {
-                    Icon(AppIcons.Sort, stringResource(R.string.browser_sort), tint = browserColors().summary)
-                }
-            }
+    when {
+        state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
         }
-        when {
-            state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+        state.hasLoadError || entries.isEmpty() -> BrowserEmptyState(state)
+        else -> LazyColumn(
+            modifier = Modifier.fillMaxSize().testTag("browser_directories"),
+            state = listState,
+            contentPadding = PaddingValues(bottom = bottomPadding),
+        ) {
+            item(key = "title") {
+                SmallTitle(
+                    text = if (state.query.isBlank()) {
+                        stringResource(R.string.browser_directory_count, entries.size)
+                    } else {
+                        pluralStringResource(
+                            R.plurals.browser_search_result_count, entries.size,
+                            state.currentName.ifEmpty { rootLabel(state) }, entries.size,
+                        )
+                    },
+                )
             }
-            state.hasLoadError || entries.isEmpty() -> BrowserEmptyState(state)
-            else -> LazyColumn(
-                modifier = Modifier.fillMaxSize().testTag("browser_directories"),
-                state = listState,
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-            ) {
-                itemsIndexed(entries, key = { _, path -> path }) { index, path ->
-                    BrowserDirectoryRow(state, path, index, entries.size)
-                }
+            itemsIndexed(entries, key = { _, path -> path }) { index, path ->
+                BrowserDirectoryRow(state, path, isFirst = index == 0, isLast = index == entries.lastIndex)
             }
         }
     }
@@ -112,70 +115,83 @@ private fun BrowserEmptyState(state: PathBrowserState) {
     }
 }
 
+// 同组目录连成一张卡片：首行圆上角、末行圆下角，行间不加分隔线
 @Composable
-private fun DirectoryTitle(path: String) {
-    BrowserText(path.substringAfterLast('/'), fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-}
-
-@Composable
-private fun DirectorySummary(isEnabled: Boolean) {
-    BrowserText(
-        stringResource(if (isEnabled) R.string.browser_folder else R.string.browser_restricted),
-        fontSize = 12.sp, color = browserColors().summary, maxLines = 1,
-    )
-}
-
-@Composable
-private fun DirectoryTrailing(state: PathBrowserState, path: String) {
-    if (!state.canSelect(path)) {
-        Icon(AppIcons.Lock, stringResource(R.string.browser_restricted), Modifier.size(20.dp), tint = browserColors().summary)
-        return
-    }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(AppIcons.ChevronRight, null, Modifier.size(18.dp), tint = browserColors().summary)
-        if (state.multiSelect) {
-            BrowserCheckbox(
-                isSelected = path in state.selectedPaths,
-                description = stringResource(R.string.browser_select_directory, path.substringAfterLast('/')),
-                onClick = { state.togglePath(path) },
-                modifier = Modifier.testTag("browser_select_$path"),
-            )
-        }
-    }
-}
-
-@Composable
-private fun BrowserDirectoryRow(state: PathBrowserState, path: String, index: Int, count: Int) {
+private fun BrowserDirectoryRow(state: PathBrowserState, path: String, isFirst: Boolean, isLast: Boolean) {
     val colors = browserColors()
-    val isSelected = path in state.selectedPaths && state.multiSelect
+    val isSelected = state.multiSelect && path in state.selectedPaths
     val isEnabled = state.canSelect(path)
-    val onClick = { state.navigateTo(path) }
-    val modifier = Modifier.fillMaxWidth().testTag("browser_directory_$path")
-    val top = if (index == 0) 16.dp else 0.dp
-    val bottom = if (index == count - 1) 16.dp else 0.dp
+    val top = if (isFirst) DIRECTORY_GROUP_CORNER_RADIUS else 0.dp
+    val bottom = if (isLast) DIRECTORY_GROUP_CORNER_RADIUS else 0.dp
     Card(
-        modifier = modifier.clip(RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = PAGE_HORIZONTAL_PADDING)
+            .clip(RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom))
+            .testTag("browser_directory_$path"),
         cornerRadius = 0.dp,
         insideMargin = PaddingValues(0.dp),
-        colors = CardDefaults.defaultColors(color = if (isSelected) colors.selected else colors.surface),
-        onClick = if (isEnabled) onClick else null,
+        colors = CardDefaults.defaultColors(color = if (isSelected) state.selectedRowColor() else colors.surface),
+        onClick = if (isEnabled) ({ state.navigateTo(path) }) else null,
         pressFeedbackType = PressFeedbackType.Sink,
         showIndication = true,
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp).alpha(if (isEnabled) 1f else 0.5f),
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = DIRECTORY_ROW_MIN_HEIGHT)
+                .padding(start = 16.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Icon(AppIcons.Folder, null, Modifier.size(34.dp), tint = colors.folder)
-            Column(Modifier.weight(1f).padding(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                DirectoryTitle(path)
-                DirectorySummary(isEnabled)
-            }
-            DirectoryTrailing(state, path)
+            Icon(
+                AppIcons.Folder, null,
+                Modifier.size(DIRECTORY_ICON_SIZE).alpha(if (isEnabled) 1f else 0.5f),
+                tint = colors.folder,
+            )
+            Text(
+                text = highlightQuery(path.substringAfterLast('/'), state.query, state.accentColor()),
+                modifier = Modifier.weight(1f).alpha(if (isEnabled) 1f else 0.5f),
+                color = colors.text,
+                fontSize = 16.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            DirectoryTrailing(state, path, isEnabled)
         }
-        if (index < count - 1) {
-            Box(Modifier.fillMaxWidth().padding(start = 62.dp, end = 16.dp).height(0.5.dp).background(colors.divider))
+    }
+}
+
+@Composable
+private fun DirectoryTrailing(state: PathBrowserState, path: String, isEnabled: Boolean) {
+    if (!isEnabled) {
+        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            Icon(AppIcons.Lock, stringResource(R.string.browser_restricted), Modifier.size(20.dp), tint = browserColors().summary)
         }
+        return
+    }
+    if (state.multiSelect) {
+        BrowserCheckbox(
+            isSelected = path in state.selectedPaths,
+            description = stringResource(R.string.browser_select_directory, path.substringAfterLast('/')),
+            onClick = { state.togglePath(path) },
+            color = state.accentColor(),
+            modifier = Modifier.testTag("browser_select_$path"),
+        )
+        return
+    }
+    Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+        Icon(AppIcons.ChevronRight, null, Modifier.size(18.dp), tint = browserColors().summary)
+    }
+}
+
+// 搜索命中的片段用当前模式的强调色加粗
+private fun highlightQuery(name: String, query: String, color: Color): AnnotatedString {
+    val keyword = query.trim()
+    val start = if (keyword.isEmpty()) -1 else name.indexOf(keyword, ignoreCase = true)
+    if (start < 0) return AnnotatedString(name)
+    return buildAnnotatedString {
+        append(name)
+        addStyle(SpanStyle(color = color, fontWeight = FontWeight.SemiBold), start, start + keyword.length)
     }
 }

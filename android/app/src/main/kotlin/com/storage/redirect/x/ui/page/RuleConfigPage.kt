@@ -244,7 +244,6 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
 
     browseRoute?.let { route ->
         PathBrowserPage(
-            title = stringResource(R.string.rule_config_browser_title),
             browserRepository = pathBrowserRepo,
             userId = userId,
             packageName = if (route.target == BrowseTarget.MappingCurrentPath) packageName else null,

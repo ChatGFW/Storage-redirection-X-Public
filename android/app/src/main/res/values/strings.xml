@@ -184,7 +184,6 @@
     <string name="rule_config_browser_use_current">Use current directory</string>
     <string name="rule_config_browser_load_failed">Failed to load directory</string>
     <string name="rule_config_browser_invalid_path">Invalid path</string>
-    <string name="rule_config_browser_title">Select Directory</string>
     <string name="rule_config_browser_empty">Empty directory</string>
 
     <!-- Settings -->
@@ -301,34 +300,36 @@
     <string name="permission_checking">Checking…</string>
     <string name="permission_retry">Retry</string>
     <!-- 目录选择器 -->
-    <string name="browser_allow_hint">Add folders the app can access</string>
-    <string name="browser_exclude_hint">Exclude folders from access</string>
-    <string name="browser_location_hint">Choose a location for the path mapping</string>
     <string name="browser_settings">Browse settings</string>
     <string name="browser_storage">Internal storage</string>
     <string name="browser_private_storage">App private storage</string>
-    <string name="browser_full_path">Show full path</string>
     <string name="browser_search">Search this folder</string>
     <string name="browser_clear_search">Clear search</string>
     <string name="browser_directory_count">Folders · %1$d</string>
     <string name="browser_sort_ascending">Name ascending</string>
     <string name="browser_sort_descending">Name descending</string>
-    <string name="browser_sort">Change folder sort order</string>
     <string name="browser_no_results">No matching folders</string>
     <string name="browser_deselect_current">Deselect this folder</string>
-    <string name="browser_folder">Folder</string>
     <string name="browser_restricted">Restricted folder</string>
     <string name="browser_select_directory">Select %1$s</string>
     <string name="browser_selected_count">Selected %1$d</string>
-    <string name="browser_cross_directory">Select across folders</string>
     <string name="browser_current_location">Current location</string>
-    <string name="browser_enter_directory">Enter a folder first</string>
-    <string name="browser_exclude_selected">Exclude selected · %1$d</string>
-    <string name="browser_add_selected">Add selected · %1$d</string>
     <string name="browser_allow_access">Allow access</string>
     <string name="browser_exclude_directory">Exclude folders</string>
     <string name="browser_clear_selection">Clear selection</string>
     <string name="browser_show_hidden">Show hidden folders</string>
     <string name="browser_no_selection">No folders selected yet</string>
     <string name="browser_remove_directory">Remove %1$s</string>
+    <string name="browser_go_to_root">Go to %1$s</string>
+    <plurals name="browser_search_result_count">
+        <item quantity="one">%2$d found in %1$s</item>
+        <item quantity="other">%2$d found in %1$s</item>
+    </plurals>
+    <string name="browser_confirm_add">Add</string>
+    <string name="browser_confirm_exclude">Exclude</string>
+    <string name="browser_path_collapse">Collapse</string>
+    <plurals name="browser_path_more_levels">
+        <item quantity="one">%1$d more level</item>
+        <item quantity="other">%1$d more levels</item>
+    </plurals>
 </resources>

@@ -1,5 +1,6 @@
 package com.storage.redirect.x.ui.component
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -13,6 +14,8 @@ import com.storage.redirect.x.ui.util.LocalTopBarBackdrop
 import com.storage.redirect.x.ui.util.surfaceBlur
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.ListPopupDefaults
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TopAppBar
@@ -23,6 +26,11 @@ val PAGE_CONTENT_TOP_PADDING = 10.dp
 val PAGE_HORIZONTAL_PADDING = 12.dp
 val PAGE_GROUP_GAP = 12.dp
 val PAGE_ITEM_GAP = 8.dp
+
+// 顶栏下拉菜单与屏幕边缘、锚点各留 8dp
+val TOP_BAR_POPUP_POSITION_PROVIDER: PopupPositionProvider = object : PopupPositionProvider by ListPopupDefaults.DropdownPositionProvider {
+    override fun getMargins(): PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+}
 
 // 顶栏模糊开启时经 backdrop 采样内容，关闭时行为与 miuix TopAppBar 一致；边距沿用 miuix 默认值
 @Composable

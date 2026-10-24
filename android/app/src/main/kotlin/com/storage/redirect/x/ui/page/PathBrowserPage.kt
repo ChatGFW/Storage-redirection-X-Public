@@ -1,35 +1,34 @@
 package com.storage.redirect.x.ui.page
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.BuildConfig
-import com.storage.redirect.x.R
 import com.storage.redirect.x.data.repository.PathBrowserRepository
-import com.storage.redirect.x.ui.page.pathbrowser.BrowserBreadcrumbs
-import com.storage.redirect.x.ui.page.pathbrowser.BrowserDialog
+import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.page.pathbrowser.BrowserDirectoryList
-import com.storage.redirect.x.ui.page.pathbrowser.BrowserScaffold
-import com.storage.redirect.x.ui.page.pathbrowser.BrowserSearch
-import com.storage.redirect.x.ui.page.pathbrowser.BrowserSelectionDock
-import com.storage.redirect.x.ui.page.pathbrowser.BrowserText
+import com.storage.redirect.x.ui.page.pathbrowser.BrowserFloatingBar
+import com.storage.redirect.x.ui.page.pathbrowser.BrowserPathPanel
+import com.storage.redirect.x.ui.page.pathbrowser.BrowserTopBar
 import com.storage.redirect.x.ui.page.pathbrowser.PathBrowserDialogs
 import com.storage.redirect.x.ui.page.pathbrowser.PathBrowserState
-import com.storage.redirect.x.ui.page.pathbrowser.browserColors
+import top.yukonga.miuix.kmp.basic.Scaffold
 
 @Composable
 fun PathBrowserPage(
-    title: String,
     browserRepository: PathBrowserRepository,
     userId: Int,
     packageName: String? = null,
@@ -47,44 +46,34 @@ fun PathBrowserPage(
     LaunchedEffect(state, state.currentPath, state.reloadKey) {
         state.load(browserRepository)
     }
-    val navigateBack = {
+    val navigateUp = {
         if (state.currentPath.isEmpty()) onBack()
         else state.navigateTo(state.currentPath.substringBeforeLast('/', ""))
     }
-    BackHandler(enabled = state.dialog == null, onBack = navigateBack)
+    // 后注册的返回处理优先：路径面板 > 搜索 > 逐级返回
+    BackHandler(enabled = !state.isSelectionDialogVisible, onBack = navigateUp)
+    BackHandler(enabled = state.isSearchActive, onBack = state::closeSearch)
+    BackHandler(enabled = state.isPathPanelExpanded) { state.isPathPanelExpanded = false }
 
-    BrowserScaffold(
-        title = title,
-        onBack = navigateBack,
-        onSettings = { state.dialog = BrowserDialog.Settings },
+    var floatingBarSpace by remember { mutableStateOf(0.dp) }
+    Scaffold(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
             .semantics { testTagsAsResourceId = BuildConfig.IS_DEBUG_BUILD }
             .testTag("page_path_browser"),
-        bottomBar = {
-            BrowserSelectionDock(state) {
+        topBar = { BrowserTopBar(state, onBack = navigateUp) },
+    ) { padding ->
+        // 列表延伸到屏幕底部，底部留白由悬浮栏高度决定
+        Box(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
+            BrowserDirectoryList(state, bottomPadding = floatingBarSpace + PAGE_ITEM_GAP)
+            BrowserFloatingBar(state, onSpaceChange = { floatingBarSpace = it }) {
                 val paths = state.confirmedPaths()
                 if (paths.isNotEmpty()) {
                     if (multiSelect) onPathsSelect(paths) else onPathSelect(paths.first())
                 }
             }
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            BrowserText(
-                text = stringResource(
-                    when {
-                        !allowExclude -> R.string.browser_location_hint
-                        state.isExcludeMode -> R.string.browser_exclude_hint
-                        else -> R.string.browser_allow_hint
-                    }
-                ),
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-                color = browserColors().summary,
-            )
-            BrowserBreadcrumbs(state)
-            BrowserSearch(state.query, { state.query = it })
-            BrowserDirectoryList(state, Modifier.weight(1f))
+            BrowserPathPanel(state)
         }
     }
     PathBrowserDialogs(state)

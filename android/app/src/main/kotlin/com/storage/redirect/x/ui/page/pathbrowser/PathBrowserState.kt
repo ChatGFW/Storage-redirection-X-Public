@@ -10,8 +10,6 @@ import com.storage.redirect.x.data.model.PathValidationResult
 import com.storage.redirect.x.data.model.RedirectConfig
 import com.storage.redirect.x.data.repository.PathBrowserRepository
 
-internal enum class BrowserDialog { Settings, Location, Selection }
-
 @Stable
 internal class PathBrowserState(
     val userId: Int,
@@ -35,7 +33,9 @@ internal class PathBrowserState(
     var isDescending by mutableStateOf(false)
     var isExcludeMode by mutableStateOf(allowExclude && isInitiallyExcluded)
     var reloadKey by mutableIntStateOf(0)
-    var dialog by mutableStateOf<BrowserDialog?>(null)
+    var isSearchActive by mutableStateOf(false)
+    var isPathPanelExpanded by mutableStateOf(false)
+    var isSelectionDialogVisible by mutableStateOf(false)
     private var loadGeneration = 0
 
     // 目标可能属于其他用户或应用私有挂载点，不能使用当前用户的存储目录。
@@ -46,6 +46,9 @@ internal class PathBrowserState(
 
     val absolutePath: String
         get() = if (currentPath.isEmpty()) rootPath else "$rootPath/$currentPath"
+
+    val currentName: String
+        get() = currentPath.substringAfterLast('/')
 
     val visibleDirectories: List<String>
         get() = directories.filter { path ->
@@ -73,6 +76,8 @@ internal class PathBrowserState(
         loadGeneration += 1
         currentPath = path
         query = ""
+        isSearchActive = false
+        isPathPanelExpanded = false
         directories = emptyList()
         isLoading = true
         hasLoadError = false
@@ -82,6 +87,11 @@ internal class PathBrowserState(
     fun togglePath(path: String) {
         if (!multiSelect || !canSelect(path)) return
         selectedPaths = if (path in selectedPaths) selectedPaths - path else selectedPaths + path
+    }
+
+    fun closeSearch() {
+        isSearchActive = false
+        query = ""
     }
 
     fun clearSelection() {

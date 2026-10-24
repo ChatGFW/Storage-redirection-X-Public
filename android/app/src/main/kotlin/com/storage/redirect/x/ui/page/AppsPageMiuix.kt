@@ -1,17 +1,12 @@
 package com.storage.redirect.x.ui.page
 
 import android.graphics.drawable.Drawable
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -21,13 +16,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,7 +30,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,8 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -57,16 +46,18 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
 import com.storage.redirect.x.data.model.RedirectTemplate
 import com.storage.redirect.x.data.repository.TemplateApplyMode
+import com.storage.redirect.x.ui.component.BottomFloatingBar
 import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
+import com.storage.redirect.x.ui.component.PillButton
 import com.storage.redirect.x.ui.component.SrxSmallTopAppBar
 import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.component.TOP_BAR_POPUP_POSITION_PROVIDER
 import com.storage.redirect.x.ui.icon.AppIcons
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -74,12 +65,10 @@ import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
-import top.yukonga.miuix.kmp.basic.FloatingToolbar
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
-import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.PullToRefresh
@@ -94,7 +83,6 @@ import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
-private val APPS_POPUP_MARGIN = 8.dp
 private val APPS_ITEM_INSIDE_VERTICAL_PADDING = 10.dp
 private val APPS_ITEM_INSIDE_HORIZONTAL_PADDING = 16.dp
 private val APPS_ICON_SIZE = 44.dp
@@ -110,20 +98,6 @@ private val APPS_SHARED_UID_TAG_COLOR = Color(0xFFF08A00)
 private val APPS_SKELETON_TEXT_SPACING = 6.dp
 private val APPS_SKELETON_TEXT_CORNER_RADIUS = 4.dp
 
-// 批量栏：贴底居中的胶囊，距屏幕底至少 16dp，有导航条时再抬高 12dp
-private val APPS_BATCH_BAR_MIN_BOTTOM_OFFSET = 16.dp
-private val APPS_BATCH_BAR_NAV_GAP = 12.dp
-private val APPS_BATCH_BAR_INSIDE_PADDING = 8.dp
-private val APPS_BATCH_BUTTON_MIN_WIDTH = 120.dp
-private val APPS_BATCH_BUTTON_CORNER_RADIUS = 50.dp
-
-private val topBarPopupPositionProvider = object : PopupPositionProvider by ListPopupDefaults.DropdownPositionProvider {
-    override fun getMargins(): PaddingValues = PaddingValues(
-        horizontal = APPS_POPUP_MARGIN,
-        vertical = APPS_POPUP_MARGIN,
-    )
-}
-
 @Composable
 internal fun AppsPageMiuix(
     data: AppsPageData,
@@ -131,15 +105,10 @@ internal fun AppsPageMiuix(
     actions: AppsPageActions,
 ) {
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-    val density = LocalDensity.current
-    var batchBarHeightPx by remember { mutableIntStateOf(0) }
-    val batchBarBottomOffset = max(
-        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + APPS_BATCH_BAR_NAV_GAP,
-        APPS_BATCH_BAR_MIN_BOTTOM_OFFSET,
-    )
+    var batchBarSpace by remember { mutableStateOf(0.dp) }
     // 批量模式底栏已隐藏，列表底部只为批量栏留空
     val listBottomPadding = if (data.isBatchMode) {
-        batchBarBottomOffset + with(density) { batchBarHeightPx.toDp() } + PAGE_ITEM_GAP
+        batchBarSpace + PAGE_ITEM_GAP
     } else {
         data.bottomInnerPadding
     }
@@ -190,17 +159,20 @@ internal fun AppsPageMiuix(
             }
         }
 
-        AnimatedVisibility(
-            visible = data.isBatchMode,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = batchBarBottomOffset),
-            enter = slideInVertically { it } + fadeIn(),
-            exit = slideOutVertically { it } + fadeOut(),
+        BottomFloatingBar(
+            isVisible = data.isBatchMode,
+            onSpaceChange = { batchBarSpace = it },
         ) {
-            BatchActionBar(
-                actions = actions,
-                modifier = Modifier.onSizeChanged { batchBarHeightPx = it.height },
+            PillButton(
+                text = stringResource(R.string.apps_restore_rules),
+                onClick = actions.onShowRestoreRules,
+                modifier = Modifier.testTag("apps_multi_select_restore"),
+            )
+            PillButton(
+                text = stringResource(R.string.apps_batch_apply_template),
+                onClick = actions.onShowTemplatePicker,
+                modifier = Modifier.testTag("apps_multi_select_apply_template"),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
             )
         }
     }
@@ -304,35 +276,6 @@ private fun BatchTopBarMiuix(data: AppsPageData, actions: AppsPageActions) {
 }
 
 @Composable
-private fun BatchActionBar(actions: AppsPageActions, modifier: Modifier = Modifier) {
-    FloatingToolbar(
-        modifier = modifier,
-        outSidePadding = PaddingValues(0.dp),
-    ) {
-        Row(
-            modifier = Modifier.padding(APPS_BATCH_BAR_INSIDE_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(APPS_BATCH_BAR_INSIDE_PADDING),
-        ) {
-            TextButton(
-                text = stringResource(R.string.apps_restore_rules),
-                onClick = actions.onShowRestoreRules,
-                modifier = Modifier.testTag("apps_multi_select_restore"),
-                cornerRadius = APPS_BATCH_BUTTON_CORNER_RADIUS,
-                minWidth = APPS_BATCH_BUTTON_MIN_WIDTH,
-            )
-            TextButton(
-                text = stringResource(R.string.apps_batch_apply_template),
-                onClick = actions.onShowTemplatePicker,
-                modifier = Modifier.testTag("apps_multi_select_apply_template"),
-                cornerRadius = APPS_BATCH_BUTTON_CORNER_RADIUS,
-                minWidth = APPS_BATCH_BUTTON_MIN_WIDTH,
-                colors = ButtonDefaults.textButtonColorsPrimary(),
-            )
-        }
-    }
-}
-
-@Composable
 private fun NormalTopBarMiuix(
     data: AppsPageData,
     dialogs: AppsPageDialogState,
@@ -357,7 +300,7 @@ private fun NormalTopBarMiuix(
                     }
                     OverlayListPopup(
                         show = dialogs.showUserMenu.value,
-                        popupPositionProvider = topBarPopupPositionProvider,
+                        popupPositionProvider = TOP_BAR_POPUP_POSITION_PROVIDER,
                         alignment = PopupPositionProvider.Align.TopEnd,
                         onDismissRequest = { dialogs.showUserMenu.value = false },
                     ) {
@@ -382,7 +325,7 @@ private fun NormalTopBarMiuix(
                 }
                 OverlayListPopup(
                     show = dialogs.showFilterMenu.value,
-                    popupPositionProvider = topBarPopupPositionProvider,
+                    popupPositionProvider = TOP_BAR_POPUP_POSITION_PROVIDER,
                     alignment = PopupPositionProvider.Align.TopEnd,
                     onDismissRequest = { dialogs.showFilterMenu.value = false },
                 ) {
