@@ -5,18 +5,17 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -28,35 +27,42 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
-import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.data.service.RootService
+import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
+import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
+import com.storage.redirect.x.ui.component.STATUS_SUCCESS_COLOR
+import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.icon.AppIcons
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 // 权限状态
 enum class PermissionState { UNKNOWN, CHECKING, GRANTED, DENIED }
-// 页面间距：横向边距，头部留白，标题区间距，卡片间距，底部收尾间距
-private val PERMISSION_PAGE_HORIZONTAL_PADDING = 24.dp
-private val PERMISSION_PAGE_HEADER_TOP_SPACING = 80.dp
-private val PERMISSION_PAGE_TITLE_TOP_SPACING = 24.dp
-private val PERMISSION_PAGE_TITLE_BODY_SPACING = 8.dp
-private val PERMISSION_PAGE_SECTION_SPACING = 32.dp
-private val PERMISSION_PAGE_CARD_SPACING = 12.dp
-private val PERMISSION_PAGE_BOTTOM_SPACING = 32.dp
+
 private val PERMISSION_CARD_CONTENT_PADDING = 16.dp
+private val PERMISSION_CARD_ICON_SIZE = 24.dp
 private val PERMISSION_CARD_ICON_TEXT_SPACING = 12.dp
 private val PERMISSION_CARD_ACTION_SPACING = 8.dp
+// 卡片右侧的小号胶囊：授权按钮与已授权标签同高
+private val PERMISSION_ACTION_HEIGHT = 34.dp
+private const val PERMISSION_GRANTED_BACKGROUND_ALPHA = 0.12f
 
 @Composable
 fun PermissionPage(onAllGranted: () -> Unit) {
@@ -101,138 +107,76 @@ fun PermissionPage(onAllGranted: () -> Unit) {
         }
     }
 
-    val colorScheme = MiuixTheme.colorScheme
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = PERMISSION_PAGE_HORIZONTAL_PADDING),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(Modifier.height(PERMISSION_PAGE_HEADER_TOP_SPACING))
-
-        // 图标
-        Box(
+    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
+    Scaffold(
+        topBar = {
+            SrxTopAppBar(
+                title = stringResource(R.string.permission_title),
+                subtitle = stringResource(R.string.permission_description),
+                scrollBehavior = scrollBehavior,
+            )
+        },
+    ) { padding ->
+        Column(
             modifier = Modifier
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(colorScheme.primary),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(padding)
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = PAGE_HORIZONTAL_PADDING, vertical = PAGE_CONTENT_TOP_PADDING),
+            verticalArrangement = Arrangement.spacedBy(PAGE_ITEM_GAP),
         ) {
-            Icon(
-                imageVector = AppIcons.Lock,
-                contentDescription = null,
-                tint = colorScheme.onPrimary,
-                modifier = Modifier.size(36.dp)
-            )
-        }
-
-        Spacer(Modifier.height(PERMISSION_PAGE_TITLE_TOP_SPACING))
-
-        Text(
-            text = stringResource(R.string.permission_title),
-            style = MiuixTheme.textStyles.headline1,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(Modifier.height(PERMISSION_PAGE_TITLE_BODY_SPACING))
-
-        Text(
-            text = stringResource(R.string.permission_description),
-            style = MiuixTheme.textStyles.body1,
-            color = colorScheme.onSurfaceVariantSummary,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(Modifier.height(PERMISSION_PAGE_SECTION_SPACING))
-
-        // ROOT 权限
-        PermissionCard(
-            title = stringResource(R.string.permission_root),
-            description = stringResource(R.string.permission_root_desc),
-            state = rootState,
-            buttonText = when (rootState) {
-                PermissionState.UNKNOWN -> stringResource(R.string.permission_grant)
-                PermissionState.CHECKING -> stringResource(R.string.permission_checking)
-                PermissionState.GRANTED -> stringResource(R.string.permission_granted)
-                PermissionState.DENIED -> stringResource(R.string.permission_retry)
-            },
-            onRequest = {
-                rootState = PermissionState.CHECKING
-                scope.launch {
-                    val hasRoot = RootService.isRootAvailable()
-                    rootState = if (hasRoot) PermissionState.GRANTED else PermissionState.DENIED
-                }
-            }
-        )
-
-        Spacer(Modifier.height(PERMISSION_PAGE_CARD_SPACING))
-
-        // 通知权限（Android 13+ 才需要）
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             PermissionCard(
-                title = stringResource(R.string.permission_notification),
-                description = stringResource(R.string.permission_notification_desc),
-                state = notificationState,
-                buttonText = when (notificationState) {
-                    PermissionState.UNKNOWN -> stringResource(R.string.permission_grant)
-                    PermissionState.CHECKING -> stringResource(R.string.permission_checking)
-                    PermissionState.GRANTED -> stringResource(R.string.permission_granted)
-                    PermissionState.DENIED -> stringResource(R.string.permission_retry)
-                },
+                icon = AppIcons.Shield,
+                title = stringResource(R.string.permission_root),
+                description = stringResource(R.string.permission_root_desc),
+                state = rootState,
                 onRequest = {
-                    notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    rootState = PermissionState.CHECKING
+                    scope.launch {
+                        val hasRoot = RootService.isRootAvailable()
+                        rootState = if (hasRoot) PermissionState.GRANTED else PermissionState.DENIED
+                    }
                 }
             )
-
-            Spacer(Modifier.height(PERMISSION_PAGE_CARD_SPACING))
+            // 通知权限（Android 13+ 才需要）
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                PermissionCard(
+                    icon = AppIcons.Notification,
+                    title = stringResource(R.string.permission_notification),
+                    description = stringResource(R.string.permission_notification_desc),
+                    state = notificationState,
+                    onRequest = {
+                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                )
+            }
         }
-
-        Spacer(Modifier.height(PERMISSION_PAGE_BOTTOM_SPACING))
     }
 }
 
-// 单项权限卡片
+// 单项权限卡片：已授权显示绿色标签，否则显示授权按钮
 @Composable
 private fun PermissionCard(
+    icon: ImageVector,
     title: String,
     description: String,
     state: PermissionState,
-    buttonText: String,
     onRequest: () -> Unit
 ) {
     val colorScheme = MiuixTheme.colorScheme
-    val isGranted = state == PermissionState.GRANTED
-    val isChecking = state == PermissionState.CHECKING
-
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(PERMISSION_CARD_CONTENT_PADDING),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 状态图标
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        if (isGranted) colorScheme.primaryContainer
-                        else colorScheme.secondaryContainer
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isGranted) AppIcons.Check else AppIcons.Info,
-                    contentDescription = null,
-                    tint = if (isGranted) colorScheme.primary else colorScheme.secondary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = colorScheme.primary,
+                modifier = Modifier.size(PERMISSION_CARD_ICON_SIZE)
+            )
             Spacer(Modifier.width(PERMISSION_CARD_ICON_TEXT_SPACING))
-
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
@@ -245,15 +189,43 @@ private fun PermissionCard(
                     color = colorScheme.onSurfaceVariantSummary
                 )
             }
-
-            if (!isGranted) {
-                Spacer(Modifier.width(PERMISSION_CARD_ACTION_SPACING))
+            Spacer(Modifier.width(PERMISSION_CARD_ACTION_SPACING))
+            if (state == PermissionState.GRANTED) {
+                GrantedBadge()
+            } else {
                 TextButton(
-                    text = buttonText,
+                    text = stringResource(
+                        when (state) {
+                            PermissionState.CHECKING -> R.string.permission_checking
+                            PermissionState.DENIED -> R.string.permission_retry
+                            else -> R.string.permission_grant
+                        }
+                    ),
                     onClick = onRequest,
-                    enabled = !isChecking
+                    enabled = state != PermissionState.CHECKING,
+                    cornerRadius = PERMISSION_ACTION_HEIGHT / 2,
+                    minHeight = PERMISSION_ACTION_HEIGHT,
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    insideMargin = PaddingValues(horizontal = 14.dp),
+                    textStyle = MiuixTheme.textStyles.button.copy(fontSize = 14.sp),
                 )
             }
         }
     }
+}
+
+@Composable
+private fun GrantedBadge() {
+    Text(
+        text = stringResource(R.string.permission_granted),
+        modifier = Modifier
+            .background(
+                STATUS_SUCCESS_COLOR.copy(alpha = PERMISSION_GRANTED_BACKGROUND_ALPHA),
+                RoundedCornerShape(PERMISSION_ACTION_HEIGHT / 2),
+            )
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        color = STATUS_SUCCESS_COLOR,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium,
+    )
 }
