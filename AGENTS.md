@@ -122,7 +122,6 @@ MSYS_NO_PATHCONV=1 adb -s <device_id> exec-out screencap -d <display_id> -p > <o
 ## Git 白名单与协作
 
 - `.gitignore` 默认忽略所有文件，只放行产品源码、测试代码、构建/安装/CI 必需配置与资源、许可证、共享 skills 和本规范。
-- 不跟踪演示网页、普通说明文档、临时分析、进度、日志、截图、缓存、构建产物、本机配置或密钥。`.github/CHANGELOG.md` 是现有发布流程的输入，保留跟踪。
 - 新增文件先用 `git check-ignore --no-index -v <路径>` 核对；只有真实项目输入才补充最小白名单，不用 `git add -f` 绕过规则。
 - 共享 skills 仅包括 `commit`、`pull-request`、`version-bump`，在 `.claude/skills/` 与 `.codex/skills/` 同步维护；其他现有设备调试技能仅供本地使用。
 - `CLAUDE.md` 仅保留 `@AGENTS.md`，规范只维护本文件一份。

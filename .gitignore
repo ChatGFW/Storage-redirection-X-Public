@@ -3,6 +3,7 @@
 !/.gitignore
 !/AGENTS.md
 !/CLAUDE.md
+!/README.md
 !/LICENSE
 !/Cargo.toml
 !/Cargo.lock
@@ -73,6 +74,8 @@
 # 现有 CI 与发布输入，不放行普通说明文档。
 !/.github/
 !/.github/CHANGELOG.md
+!/.github/docs/
+!/.github/docs/README.zh-CN.md
 !/.github/workflows/
 !/.github/workflows/*.yml
 !/.github/tests/
