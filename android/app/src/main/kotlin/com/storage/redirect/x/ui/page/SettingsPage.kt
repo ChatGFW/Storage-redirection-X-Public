@@ -37,7 +37,9 @@ import com.storage.redirect.x.util.BackupRestoreNotifier
 import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
+import com.storage.redirect.x.ui.component.PreferenceIcon
 import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.ui.theme.AppThemeSettings
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -157,6 +159,15 @@ private fun SettingsPageMiuix(
         return
     }
 
+    if (uiState.isAboutPageVisible) {
+        AboutPage(
+            onBack = { settingsViewModel.setAboutPageVisible(false) },
+            onOpenLicenses = { settingsViewModel.setLicensesPageVisible(true) },
+            bottomInnerPadding = bottomInnerPadding,
+        )
+        return
+    }
+
     val languageOptions = listOf(
         stringResource(R.string.language_system),
         stringResource(R.string.language_en),
@@ -219,11 +230,13 @@ private fun SettingsPageMiuix(
                 ArrowPreference(
                     title = stringResource(R.string.theme_title),
                     summary = stringResource(R.string.settings_theme_summary),
+                    startAction = { PreferenceIcon(AppIcons.Palette) },
                     onClick = onOpenTheme,
                 )
 
                 OverlayDropdownPreference(
                     title = stringResource(R.string.language_title),
+                    startAction = { PreferenceIcon(AppIcons.Translate) },
                     items = languageOptions,
                     selectedIndex = languageIndex,
                     onSelectedIndexChange = { index ->
@@ -242,6 +255,7 @@ private fun SettingsPageMiuix(
                 SwitchPreference(
                     title = stringResource(R.string.settings_fuse_fixer),
                     summary = rootActionSummary,
+                    startAction = { PreferenceIcon(AppIcons.Tool, isEnabled = canOperateRoot) },
                     checked = uiState.isFuseFixerEnabled,
                     onCheckedChange = { enabled ->
                         settingsViewModel.setFuseFixerEnabled(enabled)
@@ -252,6 +266,7 @@ private fun SettingsPageMiuix(
                 ArrowPreference(
                     title = stringResource(R.string.logs_title),
                     summary = stringResource(R.string.settings_logs_entry_desc),
+                    startAction = { PreferenceIcon(AppIcons.Document) },
                     onClick = { settingsViewModel.setLogsPageVisible(true) }
                 )
             }
@@ -263,6 +278,7 @@ private fun SettingsPageMiuix(
             Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
                 ArrowPreference(
                     title = stringResource(R.string.settings_backup_title),
+                    startAction = { PreferenceIcon(AppIcons.Backup, isEnabled = canOperateRoot) },
                     onClick = {
                         if (!canOperateRoot) return@ArrowPreference
                         val fileName = "storage_redirect_x_apps_backup_${System.currentTimeMillis()}.zip"
@@ -273,6 +289,7 @@ private fun SettingsPageMiuix(
 
                 ArrowPreference(
                     title = stringResource(R.string.settings_restore_title),
+                    startAction = { PreferenceIcon(AppIcons.Restore, isEnabled = canOperateRoot) },
                     onClick = {
                         if (!canOperateRoot) return@ArrowPreference
                         restoreLauncher.launch(
@@ -297,19 +314,16 @@ private fun SettingsPageMiuix(
                 ArrowPreference(
                     title = stringResource(R.string.settings_about),
                     summary = "v${BuildConfig.VERSION_NAME}",
-                    onClick = {}
+                    startAction = { PreferenceIcon(AppIcons.Info) },
+                    modifier = Modifier.testTag("settings_about_entry"),
+                    onClick = { settingsViewModel.setAboutPageVisible(true) }
                 )
 
                 ArrowPreference(
                     title = stringResource(R.string.settings_update),
+                    startAction = { PreferenceIcon(AppIcons.Update) },
                     modifier = Modifier.testTag("settings_update_entry"),
                     onClick = { settingsViewModel.setUpdatePageVisible(true) }
-                )
-
-                ArrowPreference(
-                    title = stringResource(R.string.settings_open_source_licenses),
-                    summary = stringResource(R.string.settings_open_source_licenses_desc),
-                    onClick = { settingsViewModel.setLicensesPageVisible(true) }
                 )
             }
 

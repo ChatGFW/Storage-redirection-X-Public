@@ -244,6 +244,8 @@
     <string name="settings_update_release_notes">更新内容</string>
     <string name="settings_about">关于</string>
     <string name="settings_open_source_licenses">开源协议</string>
+    <string name="about_project_repository">项目主页</string>
+    <string name="about_project_repository_desc">在 GitHub 查看版本发布与反馈问题</string>
     <string name="settings_open_source_licenses_desc">查看本应用使用的第三方开源组件</string>
     <string name="settings_android_libraries">Android 库</string>
     <string name="settings_native_libraries">原生库</string>

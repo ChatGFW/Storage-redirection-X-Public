@@ -22,6 +22,7 @@ data class SettingsUiState(
     val isLogsPageVisible: Boolean = false,
     val isLicensesPageVisible: Boolean = false,
     val isUpdatePageVisible: Boolean = false,
+    val isAboutPageVisible: Boolean = false,
     val hasRoot: Boolean? = null,
     val isWorking: Boolean = false,
     val isFuseFixerEnabled: Boolean = false,
@@ -76,6 +77,10 @@ class SettingsViewModel(
 
     fun setUpdatePageVisible(isVisible: Boolean) {
         _uiState.update { it.copy(isUpdatePageVisible = isVisible) }
+    }
+
+    fun setAboutPageVisible(isVisible: Boolean) {
+        _uiState.update { it.copy(isAboutPageVisible = isVisible) }
     }
 
     fun exportPackageConfigsZip(contentResolver: ContentResolver, outputUri: Uri) {

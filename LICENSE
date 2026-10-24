@@ -73,7 +73,7 @@ Android/Kotlin direct dependencies:
 - Kotlin Gradle plugin and Compose compiler/plugin: Apache-2.0.
 - AndroidX Core, Activity, Lifecycle, Compose UI, Compose Foundation, and Material 3: Apache-2.0.
 - Material Kolor: MIT, https://github.com/jordond/materialkolor.
-- Miuix UI, preference, and blur modules: Apache-2.0, https://github.com/compose-miuix-ui/miuix.
+- Miuix UI, preference, blur, and shader modules: Apache-2.0, https://github.com/compose-miuix-ui/miuix.
 - kotlinx.coroutines: Apache-2.0.
 - Gson: Apache-2.0.
 - HiddenApiBypass: Apache-2.0, https://github.com/LSPosed/AndroidHiddenApiBypass.

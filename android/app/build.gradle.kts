@@ -96,6 +96,7 @@ dependencies {
     implementation(libs.miuix)
     implementation(libs.miuix.preference)
     implementation(libs.miuix.blur)
+    implementation(libs.miuix.shader)
     implementation(libs.coroutines)
     implementation(libs.gson)
     implementation(libs.hiddenapibypass)
