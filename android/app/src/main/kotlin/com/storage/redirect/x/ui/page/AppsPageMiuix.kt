@@ -1,15 +1,19 @@
 package com.storage.redirect.x.ui.page
 
 import android.graphics.drawable.Drawable
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,10 +21,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,19 +38,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
 import com.storage.redirect.x.data.model.RedirectTemplate
@@ -57,35 +71,51 @@ import com.storage.redirect.x.ui.icon.AppIcons
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
+import top.yukonga.miuix.kmp.basic.FloatingToolbar
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SearchBar
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
 private val APPS_POPUP_MARGIN = 8.dp
-private val APPS_ITEM_INSIDE_VERTICAL_PADDING = 8.dp
+private val APPS_ITEM_INSIDE_VERTICAL_PADDING = 10.dp
 private val APPS_ITEM_INSIDE_HORIZONTAL_PADDING = 16.dp
+private val APPS_ICON_SIZE = 44.dp
 private val APPS_ITEM_CONTENT_GAP = 14.dp
-private val APPS_ARROW_START_SPACING = 12.dp
-private val APPS_SYSTEM_TAG_TOP_SPACING = 4.dp
+private val APPS_TRAILING_START_SPACING = 12.dp
+private val APPS_TAG_TOP_SPACING = 4.dp
 private val APPS_TAG_GAP = 4.dp
 private val APPS_TAG_CORNER_RADIUS = 6.dp
-private val APPS_TAG_HORIZONTAL_PADDING = 4.dp
-private val APPS_TAG_VERTICAL_PADDING = 2.dp
+private val APPS_TAG_HORIZONTAL_PADDING = 6.dp
+private val APPS_TAG_VERTICAL_PADDING = 1.dp
+private const val APPS_TAG_BACKGROUND_ALPHA = 0.12f
+private val APPS_SHARED_UID_TAG_COLOR = Color(0xFFF08A00)
 private val APPS_SKELETON_TEXT_SPACING = 6.dp
 private val APPS_SKELETON_TEXT_CORNER_RADIUS = 4.dp
+
+// 批量栏：贴底居中的胶囊，距屏幕底至少 16dp，有导航条时再抬高 12dp
+private val APPS_BATCH_BAR_MIN_BOTTOM_OFFSET = 16.dp
+private val APPS_BATCH_BAR_NAV_GAP = 12.dp
+private val APPS_BATCH_BAR_INSIDE_PADDING = 8.dp
+private val APPS_BATCH_BUTTON_MIN_WIDTH = 120.dp
+private val APPS_BATCH_BUTTON_CORNER_RADIUS = 50.dp
 
 private val topBarPopupPositionProvider = object : PopupPositionProvider by ListPopupDefaults.DropdownPositionProvider {
     override fun getMargins(): PaddingValues = PaddingValues(
@@ -100,84 +130,146 @@ internal fun AppsPageMiuix(
     dialogs: AppsPageDialogState,
     actions: AppsPageActions,
 ) {
-    val redirectedSet = remember(data.redirectedPackages) { data.redirectedPackages.toHashSet() }
+    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
+    val density = LocalDensity.current
+    var batchBarHeightPx by remember { mutableIntStateOf(0) }
+    val batchBarBottomOffset = max(
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + APPS_BATCH_BAR_NAV_GAP,
+        APPS_BATCH_BAR_MIN_BOTTOM_OFFSET,
+    )
+    // 批量模式底栏已隐藏，列表底部只为批量栏留空
+    val listBottomPadding = if (data.isBatchMode) {
+        batchBarBottomOffset + with(density) { batchBarHeightPx.toDp() } + PAGE_ITEM_GAP
+    } else {
+        data.bottomInnerPadding
+    }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .testTag("page_apps"),
     ) {
-        if (data.isBatchMode) {
-            BatchTopBarMiuix(data = data, actions = actions)
-        } else {
-            NormalTopBarMiuix(data = data, dialogs = dialogs, actions = actions)
-        }
+        Column(modifier = Modifier.fillMaxSize()) {
+            if (data.isBatchMode) {
+                BatchTopBarMiuix(data = data, actions = actions)
+            } else {
+                NormalTopBarMiuix(data = data, dialogs = dialogs, actions = actions, scrollBehavior = scrollBehavior)
+            }
 
-        Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
+            Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
 
-        SearchBar(
-            inputField = {
-                InputField(
-                    query = data.searchQuery,
-                    onQueryChange = actions.onSearchChange,
-                    onSearch = {},
-                    expanded = false,
-                    onExpandedChange = {},
-                    label = stringResource(R.string.apps_search),
-                )
-            },
-            onExpandedChange = {},
-            modifier = Modifier.fillMaxWidth(),
-        ) {}
+            SearchBar(
+                inputField = {
+                    InputField(
+                        query = data.searchQuery,
+                        onQueryChange = actions.onSearchChange,
+                        onSearch = {},
+                        expanded = false,
+                        onExpandedChange = {},
+                        label = stringResource(R.string.apps_search),
+                    )
+                },
+                onExpandedChange = {},
+                modifier = Modifier.fillMaxWidth(),
+            ) {}
 
-        when {
-            data.isLoading -> {
+            if (data.isLoading) {
                 SmallTitle(text = stringResource(R.string.apps_title))
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(modifier = Modifier.fillMaxSize(), userScrollEnabled = false) {
                     items(8) {
                         SkeletonListItem()
                     }
                 }
-            }
-
-            data.filteredApps.isEmpty() -> Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.apps_no_apps),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            } else {
+                AppList(
+                    data = data,
+                    actions = actions,
+                    scrollBehavior = scrollBehavior,
+                    bottomPadding = listBottomPadding,
                 )
             }
+        }
 
-            else -> {
-                SmallTitle(text = "${stringResource(R.string.apps_title)} (${data.filteredApps.size})")
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    state = data.listState,
-                    contentPadding = PaddingValues(bottom = data.bottomInnerPadding),
-                ) {
-                    items(data.filteredApps, key = { it.packageName }) { app ->
-                        AppListItem(
-                            appName = app.appName,
-                            packageName = app.packageName,
-                            drawable = data.icons[app.packageName],
-                            isRedirected = redirectedSet.contains(app.packageName),
-                            isSystemApp = app.isSystemApp,
-                            isSharedUid = app.packageName in data.sharedUidPackages,
-                            isSelected = data.selectedApps.any { it.packageName == app.packageName },
-                            modifier = Modifier.testTag("app_item_${app.packageName}"),
-                            onClick = { actions.onAppClick(app) },
-                            onLongClick = { actions.onAppLongClick(app) },
-                        )
-                    }
-                }
-            }
+        AnimatedVisibility(
+            visible = data.isBatchMode,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = batchBarBottomOffset),
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut(),
+        ) {
+            BatchActionBar(
+                actions = actions,
+                modifier = Modifier.onSizeChanged { batchBarHeightPx = it.height },
+            )
         }
     }
 
     AppTemplateDialogs(data = data, dialogs = dialogs, actions = actions)
     RestoreRulesDialog(dialogs = dialogs, actions = actions)
+}
+
+// 空列表也放进 LazyColumn，保证无结果时仍可下拉刷新
+@Composable
+private fun AppList(
+    data: AppsPageData,
+    actions: AppsPageActions,
+    scrollBehavior: ScrollBehavior,
+    bottomPadding: Dp,
+) {
+    val redirectedSet = remember(data.redirectedPackages) { data.redirectedPackages.toHashSet() }
+
+    PullToRefresh(
+        isRefreshing = data.isRefreshing,
+        onRefresh = actions.onRefresh,
+        modifier = Modifier.fillMaxSize(),
+        topAppBarScrollBehavior = scrollBehavior,
+        refreshTexts = listOf(
+            stringResource(R.string.common_pull_to_refresh),
+            stringResource(R.string.common_release_to_refresh),
+            stringResource(R.string.common_refreshing),
+            stringResource(R.string.common_refresh_complete),
+        ),
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            state = data.listState,
+            contentPadding = PaddingValues(bottom = bottomPadding),
+        ) {
+            if (data.filteredApps.isEmpty()) {
+                item(key = "empty") {
+                    Box(
+                        modifier = Modifier.fillParentMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.apps_no_apps),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
+                }
+                return@LazyColumn
+            }
+            item(key = "title") {
+                SmallTitle(text = stringResource(R.string.apps_list_count, data.filteredApps.size))
+            }
+            items(data.filteredApps, key = { it.packageName }) { app ->
+                AppListItem(
+                    appName = app.appName,
+                    packageName = app.packageName,
+                    drawable = data.icons[app.packageName],
+                    isRedirected = redirectedSet.contains(app.packageName),
+                    isSystemApp = app.isSystemApp,
+                    isSharedUid = app.packageName in data.sharedUidPackages,
+                    isBatchMode = data.isBatchMode,
+                    isSelected = data.selectedApps.any { it.packageName == app.packageName },
+                    modifier = Modifier.testTag("app_item_${app.packageName}"),
+                    onClick = { actions.onAppClick(app) },
+                    onLongClick = { actions.onAppLongClick(app) },
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -187,7 +279,9 @@ private fun BatchTopBarMiuix(data: AppsPageData, actions: AppsPageActions) {
         navigationIcon = {
             IconButton(
                 onClick = actions.onCancelBatch,
-                modifier = Modifier.testTag("apps_multi_select_cancel"),
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .testTag("apps_multi_select_cancel"),
             ) {
                 Icon(AppIcons.Close, contentDescription = stringResource(R.string.common_cancel))
             }
@@ -205,20 +299,37 @@ private fun BatchTopBarMiuix(data: AppsPageData, actions: AppsPageActions) {
             ) {
                 Icon(AppIcons.Swap, contentDescription = stringResource(R.string.apps_invert_selection))
             }
-            IconButton(
-                onClick = actions.onShowRestoreRules,
-                modifier = Modifier.testTag("apps_multi_select_restore"),
-            ) {
-                Icon(AppIcons.Undo, contentDescription = stringResource(R.string.apps_restore_rules))
-            }
-            IconButton(
-                onClick = actions.onShowTemplatePicker,
-                modifier = Modifier.testTag("apps_multi_select_apply_template"),
-            ) {
-                Icon(AppIcons.Layers, contentDescription = stringResource(R.string.apps_apply_template))
-            }
         },
     )
+}
+
+@Composable
+private fun BatchActionBar(actions: AppsPageActions, modifier: Modifier = Modifier) {
+    FloatingToolbar(
+        modifier = modifier,
+        outSidePadding = PaddingValues(0.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(APPS_BATCH_BAR_INSIDE_PADDING),
+            horizontalArrangement = Arrangement.spacedBy(APPS_BATCH_BAR_INSIDE_PADDING),
+        ) {
+            TextButton(
+                text = stringResource(R.string.apps_restore_rules),
+                onClick = actions.onShowRestoreRules,
+                modifier = Modifier.testTag("apps_multi_select_restore"),
+                cornerRadius = APPS_BATCH_BUTTON_CORNER_RADIUS,
+                minWidth = APPS_BATCH_BUTTON_MIN_WIDTH,
+            )
+            TextButton(
+                text = stringResource(R.string.apps_batch_apply_template),
+                onClick = actions.onShowTemplatePicker,
+                modifier = Modifier.testTag("apps_multi_select_apply_template"),
+                cornerRadius = APPS_BATCH_BUTTON_CORNER_RADIUS,
+                minWidth = APPS_BATCH_BUTTON_MIN_WIDTH,
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
+        }
+    }
 }
 
 @Composable
@@ -226,9 +337,11 @@ private fun NormalTopBarMiuix(
     data: AppsPageData,
     dialogs: AppsPageDialogState,
     actions: AppsPageActions,
+    scrollBehavior: ScrollBehavior,
 ) {
     SrxTopAppBar(
         title = stringResource(R.string.apps_title),
+        scrollBehavior = scrollBehavior,
         actions = {
             IconButton(onClick = actions.onOpenTemplates, modifier = Modifier.testTag("apps_templates_button")) {
                 Icon(AppIcons.Layers, contentDescription = stringResource(R.string.apps_templates))
@@ -236,26 +349,29 @@ private fun NormalTopBarMiuix(
             IconButton(onClick = actions.onRefresh) {
                 Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.apps_refresh))
             }
-            Box {
-                IconButton(onClick = { dialogs.showUserMenu.value = true }) {
-                    Icon(AppIcons.Group, contentDescription = stringResource(R.string.apps_switch_user))
-                }
-                OverlayListPopup(
-                    show = dialogs.showUserMenu.value,
-                    popupPositionProvider = topBarPopupPositionProvider,
-                    alignment = PopupPositionProvider.Align.TopEnd,
-                    onDismissRequest = { dialogs.showUserMenu.value = false },
-                ) {
-                    ListPopupColumn {
-                        data.systemUsers.forEachIndexed { index, user ->
-                            DropdownImpl(
-                                text = "${user.name} (${user.id})",
-                                optionSize = data.systemUsers.size,
-                                isSelected = index == data.currentUserIndex,
-                                index = index,
-                                dropdownColors = DropdownDefaults.dropdownColors(),
-                                onSelectedIndexChange = actions.onUserSelected,
-                            )
+            // 单用户设备无需切换入口
+            if (data.systemUsers.size > 1) {
+                Box {
+                    IconButton(onClick = { dialogs.showUserMenu.value = true }) {
+                        Icon(AppIcons.Group, contentDescription = stringResource(R.string.apps_switch_user))
+                    }
+                    OverlayListPopup(
+                        show = dialogs.showUserMenu.value,
+                        popupPositionProvider = topBarPopupPositionProvider,
+                        alignment = PopupPositionProvider.Align.TopEnd,
+                        onDismissRequest = { dialogs.showUserMenu.value = false },
+                    ) {
+                        ListPopupColumn {
+                            data.systemUsers.forEachIndexed { index, user ->
+                                DropdownImpl(
+                                    text = "${user.name} (${user.id})",
+                                    optionSize = data.systemUsers.size,
+                                    isSelected = index == data.currentUserIndex,
+                                    index = index,
+                                    dropdownColors = DropdownDefaults.dropdownColors(),
+                                    onSelectedIndexChange = actions.onUserSelected,
+                                )
+                            }
                         }
                     }
                 }
@@ -552,6 +668,7 @@ private fun AppListItem(
     isRedirected: Boolean,
     isSystemApp: Boolean,
     isSharedUid: Boolean,
+    isBatchMode: Boolean,
     isSelected: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -568,7 +685,7 @@ private fun AppListItem(
         onClick = onClick,
         onLongPress = onLongClick,
         colors = if (isSelected) {
-            CardDefaults.defaultColors(color = colorScheme.primaryContainer)
+            CardDefaults.defaultColors(color = colorScheme.tertiaryContainer)
         } else {
             CardDefaults.defaultColors()
         },
@@ -578,101 +695,78 @@ private fun AppListItem(
         ),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box {
-                AppIcon(
-                    drawable = drawable,
-                    modifier = Modifier.size(48.dp),
-                    placeholderColor = colorScheme.onSurface.copy(alpha = 0.08f),
-                )
-                if (isRedirected || isSelected) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(18.dp)
-                            .background(colorScheme.primary, CircleShape)
-                            .border(1.5.dp, colorScheme.surface, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            AppIcons.Check,
-                            contentDescription = stringResource(
-                                if (isSelected) R.string.apps_selected else R.string.apps_tag_redirected,
-                            ),
-                            modifier = Modifier.size(12.dp),
-                            tint = colorScheme.onPrimary,
-                        )
-                    }
-                }
-            }
+            AppIcon(
+                drawable = drawable,
+                modifier = Modifier.size(APPS_ICON_SIZE),
+                placeholderColor = colorScheme.onSurface.copy(alpha = 0.08f),
+            )
             Spacer(Modifier.width(APPS_ITEM_CONTENT_GAP))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = appName,
-                    fontSize = 16.sp,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight(550),
                     maxLines = 1,
                     modifier = Modifier.basicMarquee(),
                 )
                 Text(
                     text = packageName,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight(550),
+                    fontSize = 13.sp,
                     color = colorScheme.onSurfaceVariantSummary,
                     maxLines = 1,
                     modifier = Modifier.basicMarquee(),
                 )
-                if (isSystemApp || isSharedUid) {
-                    Spacer(Modifier.height(APPS_SYSTEM_TAG_TOP_SPACING))
+                if (isRedirected || isSharedUid || isSystemApp) {
+                    Spacer(Modifier.height(APPS_TAG_TOP_SPACING))
                     Row(horizontalArrangement = Arrangement.spacedBy(APPS_TAG_GAP)) {
+                        if (isRedirected) {
+                            StatusTag(label = stringResource(R.string.apps_tag_redirected), color = colorScheme.primary)
+                        }
                         if (isSharedUid) {
-                            StatusTag(
-                                label = stringResource(R.string.apps_tag_shared_uid),
-                                backgroundColor = colorScheme.primaryContainer,
-                                textColor = colorScheme.primary,
-                            )
+                            StatusTag(label = stringResource(R.string.apps_tag_shared_uid), color = APPS_SHARED_UID_TAG_COLOR)
                         }
                         if (isSystemApp) {
-                            StatusTag(
-                                label = stringResource(R.string.apps_system),
-                                backgroundColor = colorScheme.secondaryContainer,
-                                textColor = colorScheme.onSecondaryContainer,
-                            )
+                            StatusTag(label = stringResource(R.string.apps_system), color = colorScheme.onSurfaceVariantSummary)
                         }
                     }
                 }
             }
-            Icon(
-                imageVector = AppIcons.ChevronRight,
-                modifier = Modifier
-                    .padding(start = APPS_ARROW_START_SPACING)
-                    .size(16.dp),
-                tint = colorScheme.onSurfaceVariantActions,
-                contentDescription = null,
-            )
+            // 批量模式由整张卡片响应点击，勾选框只展示状态
+            if (isBatchMode) {
+                Checkbox(
+                    state = ToggleableState(isSelected),
+                    onClick = null,
+                    modifier = Modifier.padding(start = APPS_TRAILING_START_SPACING),
+                )
+            } else {
+                Icon(
+                    imageVector = AppIcons.ChevronRight,
+                    modifier = Modifier
+                        .padding(start = APPS_TRAILING_START_SPACING)
+                        .size(16.dp),
+                    tint = colorScheme.onSurfaceVariantActions,
+                    contentDescription = null,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun StatusTag(label: String, backgroundColor: Color, textColor: Color) {
-    Box(
-        modifier = Modifier.background(
-            color = backgroundColor,
-            shape = RoundedCornerShape(APPS_TAG_CORNER_RADIUS),
-        ),
-    ) {
-        Text(
-            modifier = Modifier.padding(
-                horizontal = APPS_TAG_HORIZONTAL_PADDING,
-                vertical = APPS_TAG_VERTICAL_PADDING,
-            ),
-            text = label,
-            fontSize = 9.sp,
-            fontWeight = FontWeight(750),
-            color = textColor,
-            maxLines = 1,
-        )
-    }
+private fun StatusTag(label: String, color: Color) {
+    Text(
+        text = label,
+        modifier = Modifier
+            .background(
+                color = color.copy(alpha = APPS_TAG_BACKGROUND_ALPHA),
+                shape = RoundedCornerShape(APPS_TAG_CORNER_RADIUS),
+            )
+            .padding(horizontal = APPS_TAG_HORIZONTAL_PADDING, vertical = APPS_TAG_VERTICAL_PADDING),
+        fontSize = 11.sp,
+        fontWeight = FontWeight(600),
+        color = color,
+        maxLines = 1,
+    )
 }
 
 @Composable
@@ -703,7 +797,7 @@ private fun SkeletonListItem() {
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(APPS_ICON_SIZE)
                     .clip(CircleShape)
                     .background(color),
             )

@@ -4,6 +4,11 @@ import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -153,6 +158,8 @@ fun App(
         }
         // 任一子页的顶栏下拉菜单展开时，禁用底栏以避免误触
         var isAnyMenuOpen by remember { mutableStateOf(false) }
+        // 应用页批量选择时由页内批量栏接管底部，隐藏底栏并锁定左右滑动
+        var isAppsBatchMode by remember { mutableStateOf(false) }
 
         fun closeDetail(modified: Boolean) {
             detailRoute = null
@@ -218,7 +225,7 @@ fun App(
         ) {
             Scaffold(
                 bottomBar = {
-                    if (bottomBarAppearance.usesBottomBarSlotPadding) {
+                    if (bottomBarAppearance.usesBottomBarSlotPadding && !isAppsBatchMode) {
                         AppNavigationBar(
                             labels = navLabels,
                             icons = navIcons,
@@ -248,6 +255,7 @@ fun App(
                             ),
                         verticalAlignment = Alignment.Top,
                         beyondViewportPageCount = navKeys.size - 1,
+                        userScrollEnabled = !isAppsBatchMode,
                     ) { page ->
                         CompositionLocalProvider(
                             LocalTopBarBackdrop provides topBarBackdrop,
@@ -265,6 +273,7 @@ fun App(
                                     configVersion = configVersion,
                                     bottomInnerPadding = overlayBottomPadding,
                                     onMenuStateChange = { isAnyMenuOpen = it },
+                                    onBatchModeChange = { isAppsBatchMode = it },
                                     onTemplatesClick = { isTemplatesPageVisible = true },
                                 )
                                 2 -> FileMonitorPage(bottomInnerPadding = overlayBottomPadding)
@@ -299,41 +308,47 @@ fun App(
                     contentAlignment = Alignment.BottomCenter,
                 ) {
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                        FloatingBottomBar(
-                            modifier = floatingBottomBarModifier.testTag("bottom_bar"),
-                            selectedIndex = selectedTabIndex,
-                            tabTags = navKeys,
-                            onSelected = { index -> rootNavigation.animateTo(index) },
-                            backdrop = bottomBarBackdrop,
-                            tabsCount = navKeys.size,
-                            isBlurEnabled = isBlurEnabled,
-                            isDarkTheme = isDark,
-                            enabled = !isAnyMenuOpen,
-                            accentColor = MiuixTheme.colorScheme.primary,
-                            containerColor = MiuixTheme.colorScheme.surfaceContainer,
+                        AnimatedVisibility(
+                            visible = !isAppsBatchMode,
+                            enter = slideInVertically { it } + fadeIn(),
+                            exit = slideOutVertically { it } + fadeOut(),
                         ) {
-                            navIcons.forEachIndexed { index, icon ->
-                                FloatingBottomBarTab(
-                                    onClick = { rootNavigation.animateTo(index) },
-                                    enabled = !isAnyMenuOpen,
-                                    modifier = Modifier
-                                        .defaultMinSize(minWidth = 76.dp)
-                                        .testTag("bottom_tab_${navKeys[index]}"),
-                                ) {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = navLabels[index],
-                                        tint = bottomBarContentColor,
-                                    )
-                                    Text(
-                                        text = navLabels[index],
-                                        fontSize = 11.sp,
-                                        lineHeight = 14.sp,
-                                        color = bottomBarContentColor,
-                                        maxLines = 1,
-                                        softWrap = false,
-                                        overflow = TextOverflow.Visible,
-                                    )
+                            FloatingBottomBar(
+                                modifier = floatingBottomBarModifier.testTag("bottom_bar"),
+                                selectedIndex = selectedTabIndex,
+                                tabTags = navKeys,
+                                onSelected = { index -> rootNavigation.animateTo(index) },
+                                backdrop = bottomBarBackdrop,
+                                tabsCount = navKeys.size,
+                                isBlurEnabled = isBlurEnabled,
+                                isDarkTheme = isDark,
+                                enabled = !isAnyMenuOpen,
+                                accentColor = MiuixTheme.colorScheme.primary,
+                                containerColor = MiuixTheme.colorScheme.surfaceContainer,
+                            ) {
+                                navIcons.forEachIndexed { index, icon ->
+                                    FloatingBottomBarTab(
+                                        onClick = { rootNavigation.animateTo(index) },
+                                        enabled = !isAnyMenuOpen,
+                                        modifier = Modifier
+                                            .defaultMinSize(minWidth = 76.dp)
+                                            .testTag("bottom_tab_${navKeys[index]}"),
+                                    ) {
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = navLabels[index],
+                                            tint = bottomBarContentColor,
+                                        )
+                                        Text(
+                                            text = navLabels[index],
+                                            fontSize = 11.sp,
+                                            lineHeight = 14.sp,
+                                            color = bottomBarContentColor,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            overflow = TextOverflow.Visible,
+                                        )
+                                    }
                                 }
                             }
                         }

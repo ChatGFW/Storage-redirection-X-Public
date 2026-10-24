@@ -111,6 +111,8 @@
     <string name="apps_refresh">Refresh</string>
     <string name="apps_templates">Templates</string>
     <string name="apps_apply_template">Choose template</string>
+    <string name="apps_list_count">Apps · %1$d</string>
+    <string name="apps_batch_apply_template">Apply template</string>
     <string name="apps_save_as_template">Save current config as template</string>
     <string name="apps_template_empty">No templates yet</string>
     <string name="apps_template_apply_mode_title">Apply template</string>
@@ -121,7 +123,6 @@
     <string name="apps_template_shared_uid_confirm_summary">This app shares UID with the following apps. The template will be applied to them too; cancel means no template will be applied:</string>
     <string name="apps_template_apply_success">Template applied</string>
     <string name="apps_template_save_failed_empty">Current app has no rules to save</string>
-    <string name="apps_selected">Selected</string>
     <plurals name="apps_selected_count">
         <item quantity="one">%1$d selected</item>
         <item quantity="other">%1$d selected</item>
@@ -277,6 +278,10 @@
     <string name="common_cancel">Cancel</string>
     <string name="common_close">Close</string>
     <string name="common_back">Back</string>
+    <string name="common_pull_to_refresh">Pull down to refresh</string>
+    <string name="common_release_to_refresh">Release to refresh</string>
+    <string name="common_refreshing">Refreshing…</string>
+    <string name="common_refresh_complete">Refreshed</string>
     <string name="common_delete">Delete</string>
     <string name="common_edit">Edit</string>
     <string name="common_add">Add</string>

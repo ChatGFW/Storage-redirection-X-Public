@@ -58,6 +58,7 @@ private const val PREF_SORT_MODE = "apps_sort_mode"
 
 internal data class AppsPageData(
     val isLoading: Boolean,
+    val isRefreshing: Boolean,
     val filteredApps: List<AppInfo>,
     val listState: LazyListState,
     val icons: Map<String, Drawable>,
@@ -142,6 +143,7 @@ fun AppsPage(
     configVersion: Int = 0,
     bottomInnerPadding: Dp = 0.dp,
     onMenuStateChange: (Boolean) -> Unit = {},
+    onBatchModeChange: (Boolean) -> Unit = {},
     onTemplatesClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -152,6 +154,7 @@ fun AppsPage(
     val scope = rememberCoroutineScope()
 
     var isLoading by remember { mutableStateOf(true) }
+    var isRefreshing by remember { mutableStateOf(false) }
     val apps = remember { mutableStateListOf<AppInfo>() }
     val icons = remember { mutableStateMapOf<String, Drawable>() }
     var config by remember { mutableStateOf(RedirectConfig()) }
@@ -190,6 +193,10 @@ fun AppsPage(
         selectedAppsForBatch.clear()
     }
 
+    LaunchedEffect(isBatchSelectionMode) {
+        onBatchModeChange(isBatchSelectionMode)
+    }
+
     LaunchedEffect(
         showUserMenu.value,
         showFilterMenu.value,
@@ -208,9 +215,10 @@ fun AppsPage(
         )
     }
 
-    suspend fun loadApps() {
+    // 下拉与按钮刷新保留现有列表，只有首次和切换条件时显示骨架
+    suspend fun loadApps(isSkeletonVisible: Boolean = true) {
         val startedAt = android.os.SystemClock.elapsedRealtime()
-        isLoading = true
+        if (isSkeletonVisible) isLoading = true
         val targetUserIndex = currentUserIndex
         // 用户和共享 UID 的 Root 查询互不依赖
         coroutineScope {
@@ -296,6 +304,17 @@ fun AppsPage(
             icons.clear()
             loadApps()
             appListState.scrollToItem(0)
+        }
+    }
+
+    fun refreshApps() {
+        if (isRefreshing) return
+        searchQuery = ""
+        isRefreshing = true
+        scope.launch {
+            loadApps(isSkeletonVisible = false)
+            appListState.scrollToItem(0)
+            isRefreshing = false
         }
     }
 
@@ -435,6 +454,7 @@ fun AppsPage(
 
     val data = AppsPageData(
         isLoading = isLoading,
+        isRefreshing = isRefreshing,
         filteredApps = filteredApps,
         listState = appListState,
         icons = icons,
@@ -464,10 +484,7 @@ fun AppsPage(
     )
     val actions = AppsPageActions(
         onSearchChange = { searchQuery = it },
-        onRefresh = {
-            searchQuery = ""
-            scope.launch { reloadAppsAndBackToFirstRow() }
-        },
+        onRefresh = { refreshApps() },
         onUserSelected = { index ->
             showUserMenu.value = false
             if (index != currentUserIndex) reloadConfig(index)

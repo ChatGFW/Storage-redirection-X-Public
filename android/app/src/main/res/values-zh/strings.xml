@@ -111,6 +111,8 @@
     <string name="apps_refresh">刷新</string>
     <string name="apps_templates">模板</string>
     <string name="apps_apply_template">选择模板</string>
+    <string name="apps_list_count">应用 · %1$d</string>
+    <string name="apps_batch_apply_template">应用模板</string>
     <string name="apps_save_as_template">保存当前配置为模板</string>
     <string name="apps_template_empty">暂无模板</string>
     <string name="apps_template_apply_mode_title">应用模板</string>
@@ -121,7 +123,6 @@
     <string name="apps_template_shared_uid_confirm_summary">此应用与以下应用共享 UID，模板将同步应用到它们；取消则不应用模板：</string>
     <string name="apps_template_apply_success">模板已应用</string>
     <string name="apps_template_save_failed_empty">当前应用没有可保存的规则</string>
-    <string name="apps_selected">已选择</string>
     <plurals name="apps_selected_count">
         <item quantity="other">已选择 %1$d 个</item>
     </plurals>
@@ -268,6 +269,10 @@
     <string name="common_cancel">取消</string>
     <string name="common_close">关闭</string>
     <string name="common_back">返回</string>
+    <string name="common_pull_to_refresh">下拉刷新</string>
+    <string name="common_release_to_refresh">松开刷新</string>
+    <string name="common_refreshing">正在刷新…</string>
+    <string name="common_refresh_complete">刷新完成</string>
     <string name="common_delete">删除</string>
     <string name="common_edit">编辑</string>
     <string name="common_add">添加</string>
