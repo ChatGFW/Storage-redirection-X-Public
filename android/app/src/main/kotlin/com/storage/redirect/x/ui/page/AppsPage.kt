@@ -42,8 +42,6 @@ import com.storage.redirect.x.data.repository.TemplateApplyMode
 import com.storage.redirect.x.data.repository.TemplateRepository
 import com.storage.redirect.x.data.service.RootService
 import com.storage.redirect.x.data.service.SystemUser
-import com.storage.redirect.x.ui.theme.LocalUiMode
-import com.storage.redirect.x.ui.theme.UiMode
 import com.storage.redirect.x.util.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -564,10 +562,7 @@ fun AppsPage(
         },
     )
 
-    when (LocalUiMode.current) {
-        UiMode.Material -> AppsPageMaterial(data = data, dialogs = dialogs, actions = actions)
-        UiMode.Miuix -> AppsPageMiuix(data = data, dialogs = dialogs, actions = actions)
-    }
+    AppsPageMiuix(data = data, dialogs = dialogs, actions = actions)
 }
 
 // 包路径不能区分更新后的系统应用，系统标记按该用户的 PackageManager 结果查询

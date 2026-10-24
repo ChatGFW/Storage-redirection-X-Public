@@ -14,13 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,8 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
-import com.storage.redirect.x.ui.theme.LocalUiMode
-import com.storage.redirect.x.ui.theme.UiMode
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -98,22 +91,9 @@ internal fun BrowserSelectionDock(state: PathBrowserState, onConfirm: () -> Unit
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BrowserRuleMode(state: PathBrowserState) {
     val labels = listOf(stringResource(R.string.browser_allow_access), stringResource(R.string.browser_exclude_directory))
-    if (LocalUiMode.current == UiMode.Material) {
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().testTag("browser_rule_mode")) {
-            labels.forEachIndexed { index, label ->
-                SegmentedButton(
-                    selected = state.isExcludeMode == (index == 1),
-                    onClick = { state.isExcludeMode = index == 1 },
-                    shape = SegmentedButtonDefaults.itemShape(index, labels.size),
-                ) { Text(label) }
-            }
-        }
-        return
-    }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val itemWidth = (maxWidth - 15.dp) / 2
         TabRowWithContour(

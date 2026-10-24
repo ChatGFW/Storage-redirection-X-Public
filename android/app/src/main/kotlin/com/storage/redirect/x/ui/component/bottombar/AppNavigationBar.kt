@@ -7,10 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon as MaterialIcon
-import androidx.compose.material3.NavigationBar as MaterialNavigationBar
-import androidx.compose.material3.NavigationBarItem as MaterialNavigationBarItem
-import androidx.compose.material3.Text as MaterialText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -24,8 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.storage.redirect.x.ui.theme.LocalUiMode
-import com.storage.redirect.x.ui.theme.UiMode
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurDefaults
@@ -37,8 +31,8 @@ import top.yukonga.miuix.kmp.basic.Text as MiuixText
 
 private val NAV_BAR_CONTENT_HEIGHT = 72.dp
 
-// 固定底栏按 uiMode 分发：Material 用 Material3 NavigationBar，Miuix 用 miuix NavigationBar + 自绘条目
-// Miuix 侧在模糊开启时经 textureBlur 采样内容，菜单展开时由 enabled 拦截点击
+// 固定底栏：miuix NavigationBar + 自绘条目
+// 模糊开启时经 textureBlur 采样内容，菜单展开时由 enabled 拦截点击
 @Composable
 fun AppNavigationBar(
     labels: List<String>,
@@ -48,34 +42,19 @@ fun AppNavigationBar(
     backdrop: Backdrop?,
     onSelect: (Int) -> Unit,
 ) {
-    when (LocalUiMode.current) {
-        UiMode.Material -> MaterialNavigationBar {
-            icons.forEachIndexed { index, icon ->
-                MaterialNavigationBarItem(
-                    selected = selectedIndex == index,
-                    onClick = { if (enabled) onSelect(index) },
-                    icon = { MaterialIcon(icon, contentDescription = labels[index]) },
-                    label = { MaterialText(labels[index]) },
-                )
-            }
-        }
-
-        UiMode.Miuix -> {
-            val isBlurEnabled = backdrop != null
-            MiuixNavigationBar(
-                color = if (isBlurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
-                modifier = Modifier.surfaceBlur(backdrop),
-            ) {
-                icons.forEachIndexed { index, icon ->
-                    MiuixBottomBarItem(
-                        label = labels[index],
-                        icon = icon,
-                        isSelected = selectedIndex == index,
-                        enabled = enabled,
-                        onClick = { onSelect(index) },
-                    )
-                }
-            }
+    val isBlurEnabled = backdrop != null
+    MiuixNavigationBar(
+        color = if (isBlurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
+        modifier = Modifier.surfaceBlur(backdrop),
+    ) {
+        icons.forEachIndexed { index, icon ->
+            MiuixBottomBarItem(
+                label = labels[index],
+                icon = icon,
+                isSelected = selectedIndex == index,
+                enabled = enabled,
+                onClick = { onSelect(index) },
+            )
         }
     }
 }

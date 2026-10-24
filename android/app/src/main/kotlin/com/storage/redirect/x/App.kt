@@ -23,7 +23,6 @@ import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -68,7 +67,6 @@ import com.storage.redirect.x.ui.theme.AppTheme
 import com.storage.redirect.x.ui.theme.AppThemeController
 import com.storage.redirect.x.ui.theme.AppThemeSettings
 import com.storage.redirect.x.ui.theme.LocalEnableBlur
-import com.storage.redirect.x.ui.theme.UiMode
 import com.storage.redirect.x.ui.theme.isInDarkTheme
 import com.storage.redirect.x.ui.util.LocalTopBarBackdrop
 import com.storage.redirect.x.ui.util.rememberTopBarBackdrop
@@ -202,28 +200,8 @@ fun App(
             onDebugPageConsumed()
         }
 
-        // 底栏配色按 uiMode 取色：Material 走 M3 colorScheme，Miuix 走 Miuix colorScheme
-        val isMaterialMode = themeSettings.uiMode == UiMode.Material
-        val bottomBarSurfaceColor = if (isMaterialMode) {
-            MaterialTheme.colorScheme.surface
-        } else {
-            MiuixTheme.colorScheme.surface
-        }
-        val bottomBarContainerColor = if (isMaterialMode) {
-            MaterialTheme.colorScheme.surfaceContainer
-        } else {
-            MiuixTheme.colorScheme.surfaceContainer
-        }
-        val bottomBarAccentColor = if (isMaterialMode) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MiuixTheme.colorScheme.primary
-        }
-        val bottomBarContentColor = if (isMaterialMode) {
-            MaterialTheme.colorScheme.onSurface
-        } else {
-            MiuixTheme.colorScheme.onSurface
-        }
+        val bottomBarSurfaceColor = MiuixTheme.colorScheme.surface
+        val bottomBarContentColor = MiuixTheme.colorScheme.onSurface
         // 底栏与顶栏各自采样内容，共享同一个内容 backdrop
         val bottomBarBackdrop = rememberLayerBackdrop {
             drawRect(bottomBarSurfaceColor)
@@ -335,8 +313,8 @@ fun App(
                             isBlurEnabled = isBlurEnabled,
                             isDarkTheme = isDark,
                             enabled = !isAnyMenuOpen,
-                            accentColor = bottomBarAccentColor,
-                            containerColor = bottomBarContainerColor,
+                            accentColor = MiuixTheme.colorScheme.primary,
+                            containerColor = MiuixTheme.colorScheme.surfaceContainer,
                         ) {
                             navIcons.forEachIndexed { index, icon ->
                                 FloatingBottomBarTab(

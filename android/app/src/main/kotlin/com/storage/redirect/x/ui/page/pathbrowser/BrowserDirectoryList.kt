@@ -21,11 +21,8 @@ import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material3.CircularProgressIndicator as MaterialProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,15 +34,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
-import com.storage.redirect.x.ui.component.material.LocalListItemShapes
-import com.storage.redirect.x.ui.component.material.SegmentedListItem
-import com.storage.redirect.x.ui.component.material.defaultSegmentedColors
-import com.storage.redirect.x.ui.component.material.defaultSingleSegmentedShape
-import com.storage.redirect.x.ui.theme.LocalUiMode
-import com.storage.redirect.x.ui.theme.UiMode
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
 @Composable
@@ -70,22 +62,20 @@ internal fun BrowserDirectoryList(state: PathBrowserState, modifier: Modifier = 
                     stringResource(if (state.isDescending) R.string.browser_sort_descending else R.string.browser_sort_ascending),
                     color = browserColors().summary, fontSize = 12.sp,
                 )
-                BrowserIconButton(onClick = { state.isDescending = !state.isDescending }) {
+                IconButton(onClick = { state.isDescending = !state.isDescending }) {
                     Icon(Icons.AutoMirrored.Rounded.Sort, stringResource(R.string.browser_sort), tint = browserColors().summary)
                 }
             }
         }
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                if (LocalUiMode.current == UiMode.Miuix) CircularProgressIndicator()
-                else MaterialProgressIndicator()
+                CircularProgressIndicator()
             }
             state.hasLoadError || entries.isEmpty() -> BrowserEmptyState(state)
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize().testTag("browser_directories"),
                 state = listState,
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(if (LocalUiMode.current == UiMode.Material) 2.dp else 0.dp),
             ) {
                 itemsIndexed(entries, key = { _, path -> path }) { index, path ->
                     BrowserDirectoryRow(state, path, index, entries.size)
@@ -159,7 +149,6 @@ private fun DirectoryTrailing(state: PathBrowserState, path: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun BrowserDirectoryRow(state: PathBrowserState, path: String, index: Int, count: Int) {
     val colors = browserColors()
@@ -167,21 +156,6 @@ private fun BrowserDirectoryRow(state: PathBrowserState, path: String, index: In
     val isEnabled = state.canSelect(path)
     val onClick = { state.navigateTo(path) }
     val modifier = Modifier.fillMaxWidth().testTag("browser_directory_$path")
-    if (LocalUiMode.current == UiMode.Material) {
-        CompositionLocalProvider(LocalListItemShapes provides defaultSingleSegmentedShape(index, count)) {
-            SegmentedListItem(
-                modifier = modifier, onClick = onClick, enabled = isEnabled,
-                colors = defaultSegmentedColors().let {
-                    if (isSelected) it.copy(containerColor = colors.selected, disabledContainerColor = colors.selected) else it
-                },
-                headlineContent = { DirectoryTitle(path) },
-                supportingContent = { DirectorySummary(isEnabled) },
-                leadingContent = { Icon(Icons.Rounded.Folder, null, Modifier.size(34.dp), tint = colors.folder) },
-                trailingContent = { DirectoryTrailing(state, path) },
-            )
-        }
-        return
-    }
     val top = if (index == 0) 16.dp else 0.dp
     val bottom = if (index == count - 1) 16.dp else 0.dp
     Card(

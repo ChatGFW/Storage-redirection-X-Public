@@ -8,20 +8,6 @@ import com.materialkolor.dynamiccolor.ColorSpec
 import com.storage.redirect.x.data.cache.AppPreferences
 import com.storage.redirect.x.data.cache.PreferenceKeys
 
-enum class UiMode(val value: String) {
-    Miuix("miuix"),
-    Material("material");
-
-    companion object {
-        val DEFAULT_VALUE = Miuix.value
-
-        fun fromValue(value: String): UiMode = when (value) {
-            Material.value -> Material
-            else -> Miuix
-        }
-    }
-}
-
 enum class ColorMode(val value: Int) {
     SYSTEM(0),
     LIGHT(1),
@@ -54,7 +40,6 @@ enum class ColorMode(val value: Int) {
 }
 
 data class AppThemeSettings(
-    val uiMode: UiMode = UiMode.Miuix,
     val colorMode: ColorMode = ColorMode.SYSTEM,
     val miuixMonet: Boolean = false,
     val keyColor: Int = 0,
@@ -90,9 +75,6 @@ object AppThemeController {
         )
         val miuixMonet = AppPreferences.getBoolean(PreferenceKeys.MIUIX_MONET, storedColorMode.isMonet)
         return AppThemeSettings(
-            uiMode = UiMode.fromValue(
-                AppPreferences.getString(PreferenceKeys.UI_MODE, UiMode.DEFAULT_VALUE),
-            ),
             colorMode = if (miuixMonet) storedColorMode.toNonMonetMode() else storedColorMode,
             miuixMonet = miuixMonet,
             keyColor = AppPreferences.getInt(PreferenceKeys.KEY_COLOR, 0),
@@ -111,7 +93,6 @@ object AppThemeController {
     }
 
     fun writeSettings(settings: AppThemeSettings) {
-        AppPreferences.put(PreferenceKeys.UI_MODE, settings.uiMode.value)
         AppPreferences.put(PreferenceKeys.THEME_MODE, settings.colorMode.value)
         AppPreferences.put(PreferenceKeys.MIUIX_MONET, settings.miuixMonet)
         AppPreferences.put(PreferenceKeys.KEY_COLOR, settings.keyColor)
@@ -131,6 +112,5 @@ object AppThemeController {
     }
 }
 
-val LocalUiMode = staticCompositionLocalOf { UiMode.Miuix }
 val LocalColorMode = staticCompositionLocalOf { ColorMode.SYSTEM }
 val LocalEnableBlur = staticCompositionLocalOf { false }

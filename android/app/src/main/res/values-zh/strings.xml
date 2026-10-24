@@ -8,10 +8,6 @@
     <string name="theme_system">跟随系统</string>
     <string name="theme_light">浅色</string>
     <string name="theme_dark">深色</string>
-    <string name="settings_ui_mode">界面风格</string>
-    <string name="settings_ui_mode_summary">在 Miuix 和 Material 风格之间切换。</string>
-    <string name="settings_ui_mode_miuix">Miuix</string>
-    <string name="settings_ui_mode_material">Material</string>
     <string name="settings_theme_summary">主题模式、主题色、调色风格与视觉效果。</string>
     <string name="settings_monet">动态取色</string>
     <string name="settings_key_color">主题色</string>

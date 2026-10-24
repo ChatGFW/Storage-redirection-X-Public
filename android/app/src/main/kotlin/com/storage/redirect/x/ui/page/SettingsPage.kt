@@ -35,7 +35,6 @@ import com.storage.redirect.x.ui.component.bottombar.BottomBarAppearanceState
 import com.storage.redirect.x.util.BackupRestoreNotifier
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.theme.AppThemeSettings
-import com.storage.redirect.x.ui.theme.UiMode
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -119,25 +118,12 @@ fun SettingsPage(
         return
     }
 
-    when (themeSettings.uiMode) {
-        UiMode.Miuix -> SettingsPageMiuix(
-            settingsViewModel = settingsViewModel,
-            uiState = uiState,
-            onOpenTheme = { isThemePageVisible = true },
-            themeSettings = themeSettings,
-            onThemeSettingsChange = onThemeSettingsChange,
-            bottomInnerPadding = bottomInnerPadding,
-        )
-
-        UiMode.Material -> SettingsPageMaterial(
-            settingsViewModel = settingsViewModel,
-            uiState = uiState,
-            onOpenTheme = { isThemePageVisible = true },
-            themeSettings = themeSettings,
-            onThemeSettingsChange = onThemeSettingsChange,
-            bottomInnerPadding = bottomInnerPadding,
-        )
-    }
+    SettingsPageMiuix(
+        settingsViewModel = settingsViewModel,
+        uiState = uiState,
+        onOpenTheme = { isThemePageVisible = true },
+        bottomInnerPadding = bottomInnerPadding,
+    )
 }
 
 @Composable
@@ -145,8 +131,6 @@ private fun SettingsPageMiuix(
     settingsViewModel: SettingsViewModel,
     uiState: SettingsUiState,
     onOpenTheme: () -> Unit,
-    themeSettings: AppThemeSettings = AppThemeSettings(),
-    onThemeSettingsChange: (AppThemeSettings) -> Unit = {},
     bottomInnerPadding: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
     val context = LocalContext.current
@@ -169,10 +153,6 @@ private fun SettingsPageMiuix(
         return
     }
 
-    val uiModeOptions = listOf(
-        stringResource(R.string.settings_ui_mode_miuix),
-        stringResource(R.string.settings_ui_mode_material),
-    )
     val languageOptions = listOf(
         stringResource(R.string.language_system),
         stringResource(R.string.language_en),
@@ -231,16 +211,6 @@ private fun SettingsPageMiuix(
             SmallTitle(text = stringResource(R.string.settings_appearance))
 
             Card(modifier = Modifier.padding(horizontal = SETTINGS_PAGE_HORIZONTAL_PADDING)) {
-                OverlayDropdownPreference(
-                    title = stringResource(R.string.settings_ui_mode),
-                    summary = stringResource(R.string.settings_ui_mode_summary),
-                    items = uiModeOptions,
-                    selectedIndex = UiMode.entries.indexOf(themeSettings.uiMode),
-                    onSelectedIndexChange = { index ->
-                        onThemeSettingsChange(themeSettings.copy(uiMode = UiMode.entries[index]))
-                    },
-                )
-
                 ArrowPreference(
                     title = stringResource(R.string.theme_title),
                     summary = stringResource(R.string.settings_theme_summary),

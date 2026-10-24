@@ -8,10 +8,6 @@
     <string name="theme_system">Follow System</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
-    <string name="settings_ui_mode">UI style</string>
-    <string name="settings_ui_mode_summary">Switch between Miuix and Material style.</string>
-    <string name="settings_ui_mode_miuix">Miuix</string>
-    <string name="settings_ui_mode_material">Material</string>
     <string name="settings_theme_summary">Theme mode, colors, palette and visual effects.</string>
     <string name="settings_monet">Dynamic color</string>
     <string name="settings_key_color">Theme color</string>

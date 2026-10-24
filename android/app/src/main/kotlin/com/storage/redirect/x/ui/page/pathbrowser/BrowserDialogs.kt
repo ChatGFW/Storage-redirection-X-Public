@@ -12,12 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material3.BasicAlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch as MaterialSwitch
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,8 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.BuildConfig
 import com.storage.redirect.x.R
-import com.storage.redirect.x.ui.theme.LocalUiMode
-import com.storage.redirect.x.ui.theme.UiMode
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.window.WindowDialog
 
@@ -43,7 +37,7 @@ internal fun PathBrowserDialogs(state: PathBrowserState) {
         BrowserDialog.Location -> stringResource(R.string.browser_current_location)
         BrowserDialog.Selection -> stringResource(R.string.browser_selected_count, state.selectedPaths.size)
     }
-    BrowserDialogWindow(title, { state.dialog = null }) {
+    WindowDialog(show = true, title = title, onDismissRequest = { state.dialog = null }) {
         Column(Modifier.semantics { testTagsAsResourceId = BuildConfig.IS_DEBUG_BUILD }.testTag("browser_dialog")) {
             when (dialog) {
                 BrowserDialog.Settings -> BrowserSettings(state)
@@ -70,22 +64,6 @@ internal fun PathBrowserDialogs(state: PathBrowserState) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun BrowserDialogWindow(title: String, onDismiss: () -> Unit, content: @Composable () -> Unit) {
-    when (LocalUiMode.current) {
-        UiMode.Miuix -> WindowDialog(show = true, title = title, onDismissRequest = onDismiss, content = content)
-        UiMode.Material -> BasicAlertDialog(onDismissRequest = onDismiss) {
-            Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    BrowserText(title, fontSize = 22.sp, fontWeight = FontWeight.Medium)
-                    content()
-                }
-            }
-        }
-    }
-}
-
 @Composable
 private fun BrowserSettings(state: PathBrowserState) {
     Row(
@@ -94,12 +72,11 @@ private fun BrowserSettings(state: PathBrowserState) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         BrowserText(stringResource(R.string.browser_show_hidden), modifier = Modifier.weight(1f))
-        val modifier = Modifier.testTag("browser_show_hidden")
-        if (LocalUiMode.current == UiMode.Miuix) {
-            Switch(checked = state.showHidden, onCheckedChange = { state.showHidden = it }, modifier = modifier)
-        } else {
-            MaterialSwitch(checked = state.showHidden, onCheckedChange = { state.showHidden = it }, modifier = modifier)
-        }
+        Switch(
+            checked = state.showHidden,
+            onCheckedChange = { state.showHidden = it },
+            modifier = Modifier.testTag("browser_show_hidden"),
+        )
     }
     BrowserButton(
         text = stringResource(R.string.browser_storage),
@@ -133,7 +110,7 @@ private fun BrowserSelectedPaths(state: PathBrowserState) {
                     BrowserText(path.substringAfterLast('/'), fontWeight = FontWeight.Medium, maxLines = 1)
                     BrowserText(path, fontSize = 12.sp, color = browserColors().summary, maxLines = 2)
                 }
-                BrowserIconButton(onClick = { state.togglePath(path) }, modifier = Modifier.testTag("browser_remove_$path")) {
+                IconButton(onClick = { state.togglePath(path) }, modifier = Modifier.testTag("browser_remove_$path")) {
                     Icon(
                         Icons.Rounded.Close, stringResource(R.string.browser_remove_directory, path),
                         tint = browserColors().summary,

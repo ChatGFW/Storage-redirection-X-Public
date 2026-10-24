@@ -3,7 +3,6 @@ package com.storage.redirect.x.data.cache
 // 统一管理偏好键，避免跨页面散落的字符串字面量
 object PreferenceKeys {
     const val LANGUAGE = "language"
-    const val UI_MODE = "ui_mode"
     const val THEME_MODE = "theme_mode"
     const val MIUIX_MONET = "miuix_monet"
     const val KEY_COLOR = "key_color"

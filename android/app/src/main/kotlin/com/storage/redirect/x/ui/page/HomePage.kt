@@ -39,8 +39,6 @@ import com.storage.redirect.x.data.service.RootService
 import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.component.StatusCard
-import com.storage.redirect.x.ui.theme.LocalUiMode
-import com.storage.redirect.x.ui.theme.UiMode
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -121,24 +119,14 @@ fun HomePage(
         }
     }
 
-    when (LocalUiMode.current) {
-        UiMode.Miuix -> HomePageMiuix(
-            themeMode = themeMode,
-            bottomInnerPadding = bottomInnerPadding,
-            showActionsMenu = showActionsMenu,
-            showRestartDialog = showRestartMediaDialog,
-            isRestarting = isRestarting,
-            onConfirmRestart = onConfirmRestart,
-        )
-
-        UiMode.Material -> HomePageMaterial(
-            bottomInnerPadding = bottomInnerPadding,
-            showActionsMenu = showActionsMenu,
-            showRestartDialog = showRestartMediaDialog,
-            isRestarting = isRestarting,
-            onConfirmRestart = onConfirmRestart,
-        )
-    }
+    HomePageMiuix(
+        themeMode = themeMode,
+        bottomInnerPadding = bottomInnerPadding,
+        showActionsMenu = showActionsMenu,
+        showRestartDialog = showRestartMediaDialog,
+        isRestarting = isRestarting,
+        onConfirmRestart = onConfirmRestart,
+    )
 }
 
 @Composable
