@@ -37,6 +37,7 @@ private val NAV_BAR_CONTENT_HEIGHT = 72.dp
 fun AppNavigationBar(
     labels: List<String>,
     icons: List<ImageVector>,
+    selectedIcons: List<ImageVector>,
     selectedIndex: Int,
     enabled: Boolean,
     backdrop: Backdrop?,
@@ -48,10 +49,11 @@ fun AppNavigationBar(
         modifier = Modifier.surfaceBlur(backdrop),
     ) {
         icons.forEachIndexed { index, icon ->
+            val isSelected = selectedIndex == index
             MiuixBottomBarItem(
                 label = labels[index],
-                icon = icon,
-                isSelected = selectedIndex == index,
+                icon = if (isSelected) selectedIcons[index] else icon,
+                isSelected = isSelected,
                 enabled = enabled,
                 onClick = { onSelect(index) },
             )

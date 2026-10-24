@@ -172,8 +172,17 @@ fun App(
             listOf(
                 AppIcons.Home,
                 AppIcons.Grid,
-                AppIcons.Eye,
+                AppIcons.Performance,
                 AppIcons.Settings,
+            )
+        }
+        // 选中的 Tab 换成同款填充图标
+        val navSelectedIcons = remember {
+            listOf(
+                AppIcons.HomeFilled,
+                AppIcons.GridFilled,
+                AppIcons.PerformanceFilled,
+                AppIcons.SettingsFilled,
             )
         }
         val navLabels = listOf(
@@ -229,6 +238,7 @@ fun App(
                         AppNavigationBar(
                             labels = navLabels,
                             icons = navIcons,
+                            selectedIcons = navSelectedIcons,
                             selectedIndex = selectedTabIndex,
                             enabled = !isAnyMenuOpen,
                             backdrop = if (isBlurEnabled) bottomBarBackdrop else null,
@@ -335,7 +345,7 @@ fun App(
                                             .testTag("bottom_tab_${navKeys[index]}"),
                                     ) {
                                         Icon(
-                                            imageVector = icon,
+                                            imageVector = if (index == selectedTabIndex) navSelectedIcons[index] else icon,
                                             contentDescription = navLabels[index],
                                             tint = bottomBarContentColor,
                                         )
