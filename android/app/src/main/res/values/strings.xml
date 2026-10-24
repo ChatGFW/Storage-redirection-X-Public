@@ -283,7 +283,6 @@
     <string name="common_refresh_complete">Refreshed</string>
     <string name="common_delete">Delete</string>
     <string name="common_edit">Edit</string>
-    <string name="common_add">Add</string>
     <string name="common_save">Save</string>
     <string name="common_retry">Retry</string>
     <string name="common_loading">Loading…</string>

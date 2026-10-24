@@ -1,29 +1,24 @@
 package com.storage.redirect.x.ui.page
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +35,7 @@ import com.storage.redirect.x.data.model.RedirectTemplate
 import com.storage.redirect.x.data.model.StoragePathMapping
 import com.storage.redirect.x.data.repository.TemplateRepository
 import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.SrxBackButton
@@ -54,32 +50,24 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private val TEMPLATE_ITEM_SPACING = 4.dp
-private val TEMPLATE_CARD_CONTENT_PADDING = 16.dp
-private val TEMPLATE_LIST_ROW_VERTICAL_PADDING = 12.dp
-private val TEMPLATE_MAPPING_SUBTITLE_TOP_SPACING = 2.dp
-private val TEMPLATE_HINT_SECTION_SPACING = 16.dp
-private val TEMPLATE_HEADER_TOP_SPACING = 12.dp
-private val TEMPLATE_HEADER_BOTTOM_SPACING = 8.dp
-private val TEMPLATE_EMPTY_PLACEHOLDER_PADDING = 24.dp
+private val TEMPLATE_CARD_HORIZONTAL_PADDING = 16.dp
+private val TEMPLATE_CARD_VERTICAL_PADDING = 14.dp
 private val TEMPLATE_DIALOG_FIELD_SPACING = 8.dp
 private val TEMPLATE_DIALOG_BOTTOM_SPACING = 16.dp
 private val TEMPLATE_DIALOG_BUTTON_SPACING = 12.dp
-private val TEMPLATE_INLINE_HINT_TOP_SPACING = 4.dp
-private val TEMPLATE_INLINE_HINT_BOTTOM_SPACING = 8.dp
 
 @Composable
 fun TemplatesPage(onBack: () -> Unit = {}) {
     val templateRepo = remember { TemplateRepository() }
     var templates by remember { mutableStateOf(templateRepo.loadTemplates()) }
     var editingTemplate by remember { mutableStateOf<RedirectTemplate?>(null) }
-    var showNameDialog by remember { mutableStateOf(false) }
+    val showNameDialog = remember { mutableStateOf(false) }
     var nameDialogInput by remember { mutableStateOf("") }
     var nameDialogError by remember { mutableStateOf(false) }
-    var deleteTemplate by remember { mutableStateOf<RedirectTemplate?>(null) }
 
     fun refresh(newTemplates: List<RedirectTemplate> = templateRepo.loadTemplates()) {
         templates = newTemplates
@@ -92,6 +80,10 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                 val saved = templateRepo.saveTemplate(updated)
                 refresh(saved)
                 editingTemplate = updated.normalized()
+            },
+            onDelete = {
+                refresh(templateRepo.deleteTemplate(template.id))
+                editingTemplate = null
             },
             onBack = { editingTemplate = null },
         )
@@ -114,7 +106,7 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                         onClick = {
                             nameDialogInput = ""
                             nameDialogError = false
-                            showNameDialog = true
+                            showNameDialog.value = true
                         },
                         modifier = Modifier.testTag("templates_add_button"),
                     ) {
@@ -152,68 +144,18 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
             ) {
                 item { Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING)) }
                 items(templates, key = { it.id }) { template ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("template_item_${template.id}"),
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    horizontal = TEMPLATE_CARD_CONTENT_PADDING,
-                                    vertical = TEMPLATE_LIST_ROW_VERTICAL_PADDING,
-                                ),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = template.name,
-                                    style = MiuixTheme.textStyles.title4,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Spacer(Modifier.height(TEMPLATE_MAPPING_SUBTITLE_TOP_SPACING))
-                                Text(
-                                    text = "${stringResource(R.string.rule_config_allowed_paths)} ${template.allowedRealPaths.size} · ${stringResource(R.string.rule_config_path_mappings)} ${template.pathMappings.size}",
-                                    style = MiuixTheme.textStyles.body2,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            IconButton(
-                                onClick = { editingTemplate = template },
-                                modifier = Modifier.testTag("template_edit_${template.id}"),
-                            ) {
-                                Icon(
-                                    AppIcons.Edit,
-                                    contentDescription = stringResource(R.string.common_edit),
-                                )
-                            }
-                            IconButton(
-                                onClick = { deleteTemplate = template },
-                                modifier = Modifier.testTag("template_delete_${template.id}"),
-                            ) {
-                                Icon(
-                                    AppIcons.Delete,
-                                    contentDescription = stringResource(R.string.common_delete),
-                                    tint = MiuixTheme.colorScheme.error,
-                                )
-                            }
-                        }
-                    }
+                    TemplateCard(template = template, onClick = { editingTemplate = template })
                     Spacer(Modifier.height(PAGE_ITEM_GAP))
                 }
-                item { Spacer(Modifier.height(TEMPLATE_HINT_SECTION_SPACING)) }
+                item { Spacer(Modifier.height(PAGE_GROUP_GAP)) }
             }
         }
     }
 
     WindowDialog(
-        show = showNameDialog,
+        show = showNameDialog.value,
         title = stringResource(R.string.templates_add),
-        onDismissRequest = { showNameDialog = false },
+        onDismissRequest = { showNameDialog.value = false },
     ) {
         TextField(
             value = nameDialogInput,
@@ -236,7 +178,7 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
         }
         Spacer(Modifier.height(TEMPLATE_DIALOG_BOTTOM_SPACING))
         TemplateDialogButtonRow(
-            show = rememberDialogState(showNameDialog) { showNameDialog = it },
+            show = showNameDialog,
             confirmTag = "templates_name_confirm",
             cancelTag = "templates_name_cancel",
             onConfirm = {
@@ -248,33 +190,10 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                 val template = RedirectTemplate(name = name).normalized()
                 val saved = templateRepo.saveTemplate(template)
                 refresh(saved)
-                showNameDialog = false
                 editingTemplate = template
-                false
+                true
             },
         )
-    }
-
-    deleteTemplate?.let { template ->
-        val showDeleteDialog = rememberDialogState(true) { if (!it) deleteTemplate = null }
-        WindowDialog(
-            show = showDeleteDialog.value,
-            title = stringResource(R.string.templates_delete),
-            summary = stringResource(R.string.templates_delete_confirm, template.name),
-            onDismissRequest = { deleteTemplate = null },
-        ) {
-            TemplateDialogButtonRow(
-                show = showDeleteDialog,
-                confirmText = stringResource(R.string.common_delete),
-                confirmTag = "template_delete_confirm",
-                cancelTag = "template_delete_cancel",
-                onConfirm = {
-                    val saved = templateRepo.deleteTemplate(template.id)
-                    refresh(saved)
-                    true
-                },
-            )
-        }
     }
 }
 
@@ -282,10 +201,12 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
 private fun TemplateEditorPage(
     template: RedirectTemplate,
     onTemplateChange: (RedirectTemplate) -> Unit,
+    onDelete: () -> Unit,
     onBack: () -> Unit,
 ) {
     var currentTemplate by remember(template.id) { mutableStateOf(template.normalized()) }
-    var showRenameDialog by remember { mutableStateOf(false) }
+    val showRenameDialog = remember { mutableStateOf(false) }
+    val showTemplateDeleteDialog = remember { mutableStateOf(false) }
     var renameInput by remember { mutableStateOf(currentTemplate.name) }
     var renameError by remember { mutableStateOf(false) }
 
@@ -325,11 +246,17 @@ private fun TemplateEditorPage(
                         onClick = {
                             renameInput = currentTemplate.name
                             renameError = false
-                            showRenameDialog = true
+                            showRenameDialog.value = true
                         },
                         modifier = Modifier.testTag("template_rename_button"),
                     ) {
                         Icon(AppIcons.Edit, contentDescription = stringResource(R.string.common_edit))
+                    }
+                    IconButton(
+                        onClick = { showTemplateDeleteDialog.value = true },
+                        modifier = Modifier.testTag("template_delete_button"),
+                    ) {
+                        Icon(AppIcons.Delete, contentDescription = stringResource(R.string.templates_delete))
                     }
                 },
                 scrollBehavior = scrollBehavior,
@@ -344,105 +271,110 @@ private fun TemplateEditorPage(
                 .padding(horizontal = PAGE_HORIZONTAL_PADDING),
         ) {
             item {
-                TemplateSectionHeader(
-                    title = "${stringResource(R.string.rule_config_allowed_paths)} (${currentTemplate.allowedRealPaths.size})",
+                RuleSectionTitle(
+                    title = stringResource(
+                        R.string.rule_config_section_count,
+                        stringResource(R.string.rule_config_allowed_paths),
+                        currentTemplate.allowedRealPaths.size,
+                    ),
                     onInfo = { showAllowedPathHint = !showAllowedPathHint },
-                    onAdd = {
-                        pathDialogIndex = null
-                        dialogPathInput = ""
-                        pathDialogErrorResId = null
-                        showPathDialog.value = true
-                    },
-                    addTag = "template_add_allowed_path",
-                    infoTag = "template_allowed_path_info",
                 )
             }
+            item { AllowedPathHintCard(showAllowedPathHint) }
             item {
-                AnimatedVisibility(
-                    visible = showAllowedPathHint,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut(),
-                ) {
-                    Column {
-                        Spacer(Modifier.height(TEMPLATE_INLINE_HINT_TOP_SPACING))
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text = stringResource(R.string.rule_config_allowed_paths_rule_hint),
-                                style = MiuixTheme.textStyles.body2,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                modifier = Modifier.padding(TEMPLATE_CARD_CONTENT_PADDING),
-                            )
-                        }
-                        Spacer(Modifier.height(TEMPLATE_INLINE_HINT_BOTTOM_SPACING))
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    if (currentTemplate.allowedRealPaths.isEmpty()) {
+                        RuleEmptyRow(stringResource(R.string.rule_config_no_paths))
+                    }
+                    currentTemplate.allowedRealPaths.forEachIndexed { index, path ->
+                        AllowedPathRow(
+                            path = path,
+                            onClick = {
+                                pathDialogIndex = index
+                                dialogPathInput = path
+                                pathDialogErrorResId = null
+                                showPathDialog.value = true
+                            },
+                            onDelete = {
+                                deleteTarget = TemplateDeleteTarget.Path(index)
+                                showDeleteDialog.value = true
+                            },
+                            modifier = Modifier.testTag("template_allowed_path_item_$index"),
+                        )
+                    }
+                    CardActionRow {
+                        CardActionButton(
+                            icon = AppIcons.Add,
+                            text = stringResource(R.string.rule_config_add_path),
+                            onClick = {
+                                pathDialogIndex = null
+                                dialogPathInput = ""
+                                pathDialogErrorResId = null
+                                showPathDialog.value = true
+                            },
+                            modifier = Modifier.testTag("template_add_allowed_path"),
+                        )
                     }
                 }
             }
 
-            if (currentTemplate.allowedRealPaths.isEmpty()) {
-                item { TemplateEmptyPlaceholder(stringResource(R.string.rule_config_no_paths)) }
-            } else {
-                itemsIndexed(currentTemplate.allowedRealPaths) { index, path ->
-                    TemplateRuleRow(
-                        text = path,
-                        index = index,
-                        onEdit = {
-                            pathDialogIndex = index
-                            dialogPathInput = path
-                            pathDialogErrorResId = null
-                            showPathDialog.value = true
-                        },
-                        onDelete = {
-                            deleteTarget = TemplateDeleteTarget.Path(index)
-                            showDeleteDialog.value = true
-                        },
-                    )
-                }
-            }
-
             item {
-                TemplateSectionHeader(
-                    title = "${stringResource(R.string.rule_config_path_mappings)} (${currentTemplate.pathMappings.size})",
-                    onAdd = {
-                        mappingDialogIndex = null
-                        dialogMappingRequestPathInput = ""
-                        dialogMappingFinalPathInput = ""
-                        mappingDialogErrorResId = null
-                        showMappingDialog.value = true
-                    },
-                    addTag = "template_add_mapping",
+                RuleSectionTitle(
+                    title = stringResource(
+                        R.string.rule_config_section_count,
+                        stringResource(R.string.rule_config_path_mappings),
+                        currentTemplate.pathMappings.size,
+                    ),
                 )
             }
-
-            if (currentTemplate.pathMappings.isEmpty()) {
-                item { TemplateEmptyPlaceholder(stringResource(R.string.rule_config_no_mappings)) }
-            } else {
-                itemsIndexed(currentTemplate.pathMappings) { index, mapping ->
-                    TemplateMappingRow(
-                        mapping = mapping,
-                        index = index,
-                        onEdit = {
-                            mappingDialogIndex = index
-                            dialogMappingRequestPathInput = mapping.requestPath
-                            dialogMappingFinalPathInput = mapping.finalPath
-                            mappingDialogErrorResId = null
-                            showMappingDialog.value = true
-                        },
-                        onDelete = {
-                            deleteTarget = TemplateDeleteTarget.Mapping(index)
-                            showDeleteDialog.value = true
-                        },
-                    )
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    if (currentTemplate.pathMappings.isEmpty()) {
+                        RuleEmptyRow(stringResource(R.string.rule_config_no_mappings))
+                    }
+                    currentTemplate.pathMappings.forEachIndexed { index, mapping ->
+                        PathMappingRow(
+                            requestPath = mapping.requestPath,
+                            finalPath = mapping.finalPath,
+                            onClick = {
+                                mappingDialogIndex = index
+                                dialogMappingRequestPathInput = mapping.requestPath
+                                dialogMappingFinalPathInput = mapping.finalPath
+                                mappingDialogErrorResId = null
+                                showMappingDialog.value = true
+                            },
+                            onDelete = {
+                                deleteTarget = TemplateDeleteTarget.Mapping(index)
+                                showDeleteDialog.value = true
+                            },
+                            modifier = Modifier.testTag("template_mapping_item_$index"),
+                        )
+                    }
+                    CardActionRow {
+                        CardActionButton(
+                            icon = AppIcons.Add,
+                            text = stringResource(R.string.rule_config_add_mapping),
+                            onClick = {
+                                mappingDialogIndex = null
+                                dialogMappingRequestPathInput = ""
+                                dialogMappingFinalPathInput = ""
+                                mappingDialogErrorResId = null
+                                showMappingDialog.value = true
+                            },
+                            modifier = Modifier.testTag("template_add_mapping"),
+                        )
+                    }
                 }
             }
 
-            item { Spacer(Modifier.height(TEMPLATE_HINT_SECTION_SPACING)) }
+            item { Spacer(Modifier.height(PAGE_GROUP_GAP)) }
         }
     }
 
     WindowDialog(
-        show = showRenameDialog,
+        show = showRenameDialog.value,
         title = stringResource(R.string.templates_edit),
-        onDismissRequest = { showRenameDialog = false },
+        onDismissRequest = { showRenameDialog.value = false },
     ) {
         TextField(
             value = renameInput,
@@ -465,7 +397,7 @@ private fun TemplateEditorPage(
         }
         Spacer(Modifier.height(TEMPLATE_DIALOG_BOTTOM_SPACING))
         TemplateDialogButtonRow(
-            show = rememberDialogState(showRenameDialog) { showRenameDialog = it },
+            show = showRenameDialog,
             confirmTag = "template_rename_confirm",
             cancelTag = "template_rename_cancel",
             onConfirm = {
@@ -516,7 +448,7 @@ private fun TemplateEditorPage(
             onConfirm = {
                 val validation = RedirectConfig.validateAllowedPath(dialogPathInput)
                 if (validation !is PathValidationResult.Valid) {
-                    pathDialogErrorResId = resolveTemplatePathValidationErrorResId(validation)
+                    pathDialogErrorResId = resolvePathValidationErrorResId(validation)
                     return@TemplateDialogButtonRow false
                 }
                 val paths = currentTemplate.allowedRealPaths.toMutableList()
@@ -580,12 +512,12 @@ private fun TemplateEditorPage(
             onConfirm = {
                 val requestValidation = RedirectConfig.validateMappingPath(dialogMappingRequestPathInput)
                 if (requestValidation !is PathValidationResult.Valid) {
-                    mappingDialogErrorResId = resolveTemplatePathValidationErrorResId(requestValidation)
+                    mappingDialogErrorResId = resolvePathValidationErrorResId(requestValidation)
                     return@TemplateDialogButtonRow false
                 }
                 val finalValidation = RedirectConfig.validateMappingPath(dialogMappingFinalPathInput)
                 if (finalValidation !is PathValidationResult.Valid) {
-                    mappingDialogErrorResId = resolveTemplatePathValidationErrorResId(finalValidation)
+                    mappingDialogErrorResId = resolvePathValidationErrorResId(finalValidation)
                     return@TemplateDialogButtonRow false
                 }
                 if (requestValidation.normalized == finalValidation.normalized) {
@@ -643,173 +575,62 @@ private fun TemplateEditorPage(
             },
         )
     }
-}
 
-@Composable
-private fun TemplateSectionHeader(
-    title: String,
-    onAdd: () -> Unit,
-    onInfo: (() -> Unit)? = null,
-    addTag: String? = null,
-    infoTag: String? = null,
-) {
-    Spacer(Modifier.height(TEMPLATE_HEADER_TOP_SPACING))
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = TEMPLATE_HEADER_BOTTOM_SPACING),
-        verticalAlignment = Alignment.CenterVertically,
+    WindowDialog(
+        show = showTemplateDeleteDialog.value,
+        title = stringResource(R.string.templates_delete),
+        summary = stringResource(R.string.templates_delete_confirm, currentTemplate.name),
+        onDismissRequest = { showTemplateDeleteDialog.value = false },
     ) {
-        Text(
-            text = title,
-            style = MiuixTheme.textStyles.title4,
-            modifier = Modifier.weight(1f),
+        TemplateDialogButtonRow(
+            show = showTemplateDeleteDialog,
+            confirmText = stringResource(R.string.common_delete),
+            confirmTag = "template_delete_confirm",
+            cancelTag = "template_delete_cancel",
+            onConfirm = {
+                onDelete()
+                true
+            },
         )
-        onInfo?.let {
-            IconButton(
-                onClick = it,
-                modifier = infoTag?.let { tag -> Modifier.testTag(tag) } ?: Modifier,
-            ) {
-                Icon(
-                    AppIcons.Info,
-                    contentDescription = stringResource(R.string.rule_config_allowed_paths_rule_hint_desc),
-                    tint = MiuixTheme.colorScheme.primary,
-                )
-            }
-        }
-        IconButton(
-            onClick = onAdd,
-            modifier = addTag?.let { Modifier.testTag(it) } ?: Modifier,
-        ) {
-            Icon(
-                AppIcons.Add,
-                contentDescription = stringResource(R.string.common_add),
-                tint = MiuixTheme.colorScheme.primary,
-            )
-        }
     }
 }
 
+// 模板卡片：名称 + 规则数量，点按进入编辑
 @Composable
-private fun TemplateRuleRow(text: String, onEdit: () -> Unit, onDelete: () -> Unit, index: Int) {
+private fun TemplateCard(template: RedirectTemplate, onClick: () -> Unit) {
+    val summaryColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("template_allowed_path_item_$index"),
+            .testTag("template_item_${template.id}"),
+        insideMargin = PaddingValues(horizontal = TEMPLATE_CARD_HORIZONTAL_PADDING, vertical = TEMPLATE_CARD_VERTICAL_PADDING),
+        onClick = onClick,
+        pressFeedbackType = PressFeedbackType.Sink,
+        showIndication = true,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = TEMPLATE_CARD_CONTENT_PADDING,
-                    vertical = TEMPLATE_LIST_ROW_VERTICAL_PADDING,
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = text,
-                modifier = Modifier.weight(1f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            IconButton(
-                onClick = onEdit,
-                modifier = Modifier.testTag("template_allowed_path_edit_$index"),
-            ) {
-                Icon(AppIcons.Edit, contentDescription = stringResource(R.string.common_edit))
-            }
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.testTag("template_allowed_path_delete_$index"),
-            ) {
-                Icon(
-                    AppIcons.Delete,
-                    contentDescription = stringResource(R.string.common_delete),
-                    tint = MiuixTheme.colorScheme.error,
-                )
-            }
-        }
-    }
-    Spacer(Modifier.height(TEMPLATE_ITEM_SPACING))
-}
-
-@Composable
-private fun TemplateMappingRow(mapping: StoragePathMapping, index: Int, onEdit: () -> Unit, onDelete: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("template_mapping_item_$index"),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = TEMPLATE_CARD_CONTENT_PADDING,
-                    vertical = TEMPLATE_LIST_ROW_VERTICAL_PADDING,
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${stringResource(R.string.rule_config_mapping_request_path)}: ${mapping.requestPath}",
+                    text = template.name,
+                    style = MiuixTheme.textStyles.title4,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(TEMPLATE_MAPPING_SUBTITLE_TOP_SPACING))
                 Text(
-                    text = "${stringResource(R.string.rule_config_mapping_final_path)}: ${mapping.finalPath}",
+                    text = "${stringResource(R.string.rule_config_allowed_paths)} ${template.allowedRealPaths.size} · ${stringResource(R.string.rule_config_path_mappings)} ${template.pathMappings.size}",
+                    modifier = Modifier.padding(top = 2.dp),
                     style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    color = summaryColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            IconButton(
-                onClick = onEdit,
-                modifier = Modifier.testTag("template_mapping_edit_$index"),
-            ) {
-                Icon(AppIcons.Edit, contentDescription = stringResource(R.string.common_edit))
-            }
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.testTag("template_mapping_delete_$index"),
-            ) {
-                Icon(
-                    AppIcons.Delete,
-                    contentDescription = stringResource(R.string.common_delete),
-                    tint = MiuixTheme.colorScheme.error,
-                )
-            }
-        }
-    }
-    Spacer(Modifier.height(TEMPLATE_ITEM_SPACING))
-}
-
-@Composable
-private fun TemplateEmptyPlaceholder(text: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(TEMPLATE_EMPTY_PLACEHOLDER_PADDING),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(text = text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-        }
-    }
-}
-
-@Composable
-private fun rememberDialogState(currentValue: Boolean, onChange: (Boolean) -> Unit): MutableState<Boolean> {
-    val latestOnChange by rememberUpdatedState(onChange)
-    return remember(currentValue) {
-        object : MutableState<Boolean> {
-            override var value: Boolean
-                get() = currentValue
-                set(newValue) = latestOnChange(newValue)
-
-            override fun component1(): Boolean = currentValue
-            override fun component2(): (Boolean) -> Unit = { latestOnChange(it) }
+            Icon(
+                AppIcons.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.padding(start = 8.dp).size(18.dp),
+                tint = summaryColor,
+            )
         }
     }
 }
@@ -844,18 +665,6 @@ private fun TemplateDialogButtonRow(
                 .weight(1f)
                 .testTag(confirmTag),
         )
-    }
-}
-
-private fun resolveTemplatePathValidationErrorResId(result: PathValidationResult): Int {
-    return when (result) {
-        PathValidationResult.Empty -> R.string.rule_config_error_empty
-        PathValidationResult.Absolute -> R.string.rule_config_error_absolute
-        PathValidationResult.Traversal -> R.string.rule_config_error_traversal
-        PathValidationResult.AndroidDataPath -> R.string.rule_config_error_android_prefix
-        PathValidationResult.WildcardNotAllowed -> R.string.rule_config_error_mapping_wildcard
-        PathValidationResult.ExclusionNotAllowed -> R.string.rule_config_error_mapping_exclusion
-        is PathValidationResult.Valid -> R.string.rule_config_error_empty
     }
 }
 
