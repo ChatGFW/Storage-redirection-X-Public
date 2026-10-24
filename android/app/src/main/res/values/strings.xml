@@ -80,8 +80,6 @@
     <string name="file_monitor_title">File Monitor</string>
     <string name="file_monitor_search_hint">Search app, package, or path</string>
     <string name="file_monitor_refresh">Refresh</string>
-    <string name="file_monitor_expand">Expand full path</string>
-    <string name="file_monitor_collapse">Collapse path</string>
     <string name="file_monitor_empty">No records yet</string>
     <string name="file_monitor_result_success">Success</string>
     <string name="file_monitor_result_failed">Failed</string>
@@ -167,6 +165,8 @@
     <string name="rule_config_no_paths">No allowed paths configured</string>
     <string name="rule_config_no_mappings">No mappings configured</string>
     <string name="rule_config_restart_hint">Changes will automatically stop the target app to take effect</string>
+    <string name="rule_config_section_count">%1$s · %2$d</string>
+    <string name="rule_config_tag_excluded">Excluded</string>
     <string name="rule_config_shared_uid_title">Shared UID</string>
     <string name="rule_config_shared_uid_hint">This app shares UID with the following apps. Enabling or configuring any will affect all:</string>
     <string name="rule_config_save_failed">Save failed</string>

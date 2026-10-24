@@ -80,8 +80,6 @@
     <string name="file_monitor_title">文件监视</string>
     <string name="file_monitor_search_hint">搜索应用名、包名或路径</string>
     <string name="file_monitor_refresh">刷新</string>
-    <string name="file_monitor_expand">展开完整路径</string>
-    <string name="file_monitor_collapse">折叠路径</string>
     <string name="file_monitor_empty">暂无监视记录</string>
     <string name="file_monitor_result_success">成功</string>
     <string name="file_monitor_result_failed">失败</string>
@@ -166,6 +164,8 @@
     <string name="rule_config_no_paths">未配置允许路径</string>
     <string name="rule_config_no_mappings">未配置映射</string>
     <string name="rule_config_restart_hint">修改后将自动停止目标应用以使配置生效</string>
+    <string name="rule_config_section_count">%1$s · %2$d</string>
+    <string name="rule_config_tag_excluded">排除</string>
     <string name="rule_config_shared_uid_title">共享 UID</string>
     <string name="rule_config_shared_uid_hint">此应用与以下应用共享 UID，开关或配置任一应用将同步影响所有关联应用：</string>
     <string name="rule_config_save_failed">保存失败</string>

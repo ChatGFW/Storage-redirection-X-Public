@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -33,13 +32,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,7 +52,9 @@ import com.storage.redirect.x.data.model.MonitorWriterType
 import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
+import com.storage.redirect.x.ui.component.STATUS_SUCCESS_COLOR
 import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.component.StatusTag
 import com.storage.redirect.x.ui.icon.AppIcons
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -68,20 +69,18 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-// 条目卡片：内边距，标签与正文间距
-private val FILE_MONITOR_CARD_CONTENT_PADDING = 12.dp
-private val FILE_MONITOR_ROW_SPACING = 8.dp
-private val FILE_MONITOR_BADGE_CORNER_RADIUS = 4.dp
-private val FILE_MONITOR_BADGE_HORIZONTAL_PADDING = 6.dp
-private val FILE_MONITOR_BADGE_VERTICAL_PADDING = 2.dp
-private val FILE_MONITOR_HEADER_META_SPACING = 6.dp
-private val FILE_MONITOR_SOURCE_TOP_SPACING = 6.dp
+// 条目卡片：应用 + 时间 / 来源动作 + 结果 / 路径，三行固定结构
+private val FILE_MONITOR_CARD_HORIZONTAL_PADDING = 16.dp
+private val FILE_MONITOR_CARD_VERTICAL_PADDING = 12.dp
+private val FILE_MONITOR_APP_ICON_SIZE = 32.dp
+private val FILE_MONITOR_ICON_GAP = 10.dp
+private val FILE_MONITOR_SOURCE_TOP_SPACING = 8.dp
 private val FILE_MONITOR_PATH_TOP_SPACING = 4.dp
 
 @Composable
 fun FileMonitorPage(
     monitorViewModel: FileMonitorViewModel = viewModel(),
-    bottomInnerPadding: androidx.compose.ui.unit.Dp = 0.dp,
+    bottomInnerPadding: Dp = 0.dp,
 ) {
     val context = LocalContext.current
     val uiState by monitorViewModel.uiState.collectAsState()
@@ -265,118 +264,64 @@ private fun MonitorEntryCard(
     } else {
         stringResource(R.string.file_monitor_source_filesystem_action, actionLabel)
     }
-    val resultInfo = when (entry.resultState) {
-        MonitorResultState.SUCCESS -> ResultInfo(
-            label = stringResource(R.string.file_monitor_result_success),
-            containerColor = colorScheme.primaryContainer,
-            textColor = colorScheme.onPrimaryContainer
-        )
-
-        MonitorResultState.FAILED -> ResultInfo(
-            label = stringResource(R.string.file_monitor_result_failed),
-            containerColor = colorScheme.errorContainer,
-            textColor = colorScheme.onErrorContainer
-        )
+    val (resultLabel, resultColor) = when (entry.resultState) {
+        MonitorResultState.SUCCESS -> stringResource(R.string.file_monitor_result_success) to STATUS_SUCCESS_COLOR
+        MonitorResultState.FAILED -> stringResource(R.string.file_monitor_result_failed) to colorScheme.error
     }
+    // 路径默认两行，点按卡片展开全文
+    var isExpanded by rememberSaveable(entry.timestamp, entry.path) { mutableStateOf(false) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        var isExpanded by rememberSaveable(entry.timestamp, entry.path) { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(FILE_MONITOR_CARD_CONTENT_PADDING),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
-            ) {
-                MonitorAppIcon(drawable = appIcon, modifier = Modifier.size(24.dp))
-
-                Spacer(Modifier.width(FILE_MONITOR_ROW_SPACING))
-
-                Text(
-                    text = appName,
-                    style = MiuixTheme.textStyles.title4,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Spacer(Modifier.width(FILE_MONITOR_ROW_SPACING))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(FILE_MONITOR_BADGE_CORNER_RADIUS))
-                            .background(resultInfo.containerColor)
-                            .padding(
-                                horizontal = FILE_MONITOR_BADGE_HORIZONTAL_PADDING,
-                                vertical = FILE_MONITOR_BADGE_VERTICAL_PADDING
-                            )
-                    ) {
-                        Text(
-                            text = resultInfo.label,
-                            fontWeight = FontWeight.W600,
-                            color = resultInfo.textColor,
-                            fontSize = 10.sp
-                        )
-                    }
-
-                    Spacer(Modifier.width(FILE_MONITOR_HEADER_META_SPACING))
-
-                    Text(
-                        text = formatTimestamp(entry.timestamp),
-                        fontSize = 10.sp
-                    )
-
-                    Spacer(Modifier.width(FILE_MONITOR_HEADER_META_SPACING))
-
-                    IconButton(
-                        onClick = { isExpanded = !isExpanded },
-                        modifier = Modifier.size(20.dp),
-                    ) {
-                        Icon(
-                            imageVector = if (isExpanded) AppIcons.ChevronUp else AppIcons.ChevronDown,
-                            contentDescription = stringResource(
-                                if (isExpanded) R.string.file_monitor_collapse else R.string.file_monitor_expand
-                            ),
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(FILE_MONITOR_SOURCE_TOP_SPACING))
-
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        insideMargin = PaddingValues(
+            horizontal = FILE_MONITOR_CARD_HORIZONTAL_PADDING,
+            vertical = FILE_MONITOR_CARD_VERTICAL_PADDING,
+        ),
+        onClick = { isExpanded = !isExpanded },
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MonitorAppIcon(drawable = appIcon, modifier = Modifier.size(FILE_MONITOR_APP_ICON_SIZE))
+            Spacer(Modifier.width(FILE_MONITOR_ICON_GAP))
             Text(
-                text = sourceLabel,
-                style = MiuixTheme.textStyles.body2,
-                color = colorScheme.onSurfaceVariantSummary,
+                text = appName,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
-
-            Spacer(Modifier.height(FILE_MONITOR_PATH_TOP_SPACING))
-
             Text(
-                text = entry.displayPath,
-                style = MiuixTheme.textStyles.body2,
-                fontFamily = FontFamily.Monospace,
-                maxLines = if (isExpanded) Int.MAX_VALUE else 2,
-                overflow = if (isExpanded) TextOverflow.Clip else TextOverflow.Ellipsis
+                text = formatTimestamp(entry.timestamp),
+                fontSize = 13.sp,
+                color = colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier.padding(start = FILE_MONITOR_ICON_GAP),
             )
         }
+        Row(
+            modifier = Modifier.padding(top = FILE_MONITOR_SOURCE_TOP_SPACING),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = sourceLabel,
+                fontSize = 14.sp,
+                color = colorScheme.onSurfaceSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            StatusTag(label = resultLabel, color = resultColor, modifier = Modifier.padding(start = FILE_MONITOR_ICON_GAP))
+        }
+        Text(
+            text = entry.displayPath,
+            modifier = Modifier.padding(top = FILE_MONITOR_PATH_TOP_SPACING),
+            style = MiuixTheme.textStyles.body2,
+            color = colorScheme.onSurfaceVariantSummary,
+            fontFamily = FontFamily.Monospace,
+            maxLines = if (isExpanded) Int.MAX_VALUE else 2,
+            overflow = if (isExpanded) TextOverflow.Clip else TextOverflow.Ellipsis,
+        )
     }
 }
-
-private data class ResultInfo(
-    val label: String,
-    val containerColor: Color,
-    val textColor: Color
-)
 
 @Composable
 private fun MonitorAppIcon(drawable: Drawable?, modifier: Modifier = Modifier) {

@@ -36,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -55,8 +54,10 @@ import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.PillButton
+import com.storage.redirect.x.ui.component.STATUS_WARNING_COLOR
 import com.storage.redirect.x.ui.component.SrxSmallTopAppBar
 import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.component.StatusTag
 import com.storage.redirect.x.ui.component.TOP_BAR_POPUP_POSITION_PROVIDER
 import com.storage.redirect.x.ui.icon.AppIcons
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -90,11 +91,6 @@ private val APPS_ITEM_CONTENT_GAP = 14.dp
 private val APPS_TRAILING_START_SPACING = 12.dp
 private val APPS_TAG_TOP_SPACING = 4.dp
 private val APPS_TAG_GAP = 4.dp
-private val APPS_TAG_CORNER_RADIUS = 6.dp
-private val APPS_TAG_HORIZONTAL_PADDING = 6.dp
-private val APPS_TAG_VERTICAL_PADDING = 1.dp
-private const val APPS_TAG_BACKGROUND_ALPHA = 0.12f
-private val APPS_SHARED_UID_TAG_COLOR = Color(0xFFF08A00)
 private val APPS_SKELETON_TEXT_SPACING = 6.dp
 private val APPS_SKELETON_TEXT_CORNER_RADIUS = 4.dp
 
@@ -666,7 +662,7 @@ private fun AppListItem(
                             StatusTag(label = stringResource(R.string.apps_tag_redirected), color = colorScheme.primary)
                         }
                         if (isSharedUid) {
-                            StatusTag(label = stringResource(R.string.apps_tag_shared_uid), color = APPS_SHARED_UID_TAG_COLOR)
+                            StatusTag(label = stringResource(R.string.apps_tag_shared_uid), color = STATUS_WARNING_COLOR)
                         }
                         if (isSystemApp) {
                             StatusTag(label = stringResource(R.string.apps_system), color = colorScheme.onSurfaceVariantSummary)
@@ -693,23 +689,6 @@ private fun AppListItem(
             }
         }
     }
-}
-
-@Composable
-private fun StatusTag(label: String, color: Color) {
-    Text(
-        text = label,
-        modifier = Modifier
-            .background(
-                color = color.copy(alpha = APPS_TAG_BACKGROUND_ALPHA),
-                shape = RoundedCornerShape(APPS_TAG_CORNER_RADIUS),
-            )
-            .padding(horizontal = APPS_TAG_HORIZONTAL_PADDING, vertical = APPS_TAG_VERTICAL_PADDING),
-        fontSize = 11.sp,
-        fontWeight = FontWeight(600),
-        color = color,
-        maxLines = 1,
-    )
 }
 
 @Composable

@@ -1,5 +1,7 @@
 package com.storage.redirect.x.ui.page
 
+import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -9,11 +11,15 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -22,13 +28,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -36,14 +43,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
 import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.data.model.PathValidationResult
@@ -56,23 +67,32 @@ import com.storage.redirect.x.data.repository.SharedUidRepository
 import com.storage.redirect.x.data.repository.TemplateApplyMode
 import com.storage.redirect.x.data.repository.TemplateRepository
 import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
+import com.storage.redirect.x.ui.component.STATUS_WARNING_COLOR
 import com.storage.redirect.x.ui.component.SrxBackButton
 import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.component.StatusTag
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.VerticalDivider
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.window.WindowDialog
@@ -81,17 +101,15 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 // 页面间距：列表横向边距，区块间距，行内边距，弹窗字段间距与提示卡片间距
 private val RULE_CONFIG_ITEM_SPACING = 4.dp
 private val RULE_CONFIG_CARD_CONTENT_PADDING = 16.dp
-private val RULE_CONFIG_LIST_ROW_VERTICAL_PADDING = 12.dp
-private val RULE_CONFIG_MAPPING_SUBTITLE_TOP_SPACING = 2.dp
-private val RULE_CONFIG_HINT_SECTION_SPACING = 16.dp
-private val RULE_CONFIG_HEADER_TOP_SPACING = 12.dp
-private val RULE_CONFIG_HEADER_BOTTOM_SPACING = 8.dp
 private val RULE_CONFIG_EMPTY_PLACEHOLDER_PADDING = 24.dp
+private val RULE_CONFIG_APP_ICON_SIZE = 40.dp
+private val RULE_CONFIG_APP_ICON_END_PADDING = 12.dp
+private val RULE_CONFIG_ACTION_ROW_HEIGHT = 48.dp
+private val RULE_CONFIG_ACTION_DIVIDER_PADDING = 12.dp
+private const val RULE_CONFIG_WARNING_CARD_ALPHA = 0.12f
 private val RULE_CONFIG_DIALOG_FIELD_SPACING = 8.dp
 private val RULE_CONFIG_DIALOG_BOTTOM_SPACING = 16.dp
 private val RULE_CONFIG_DIALOG_BUTTON_SPACING = 12.dp
-private val RULE_CONFIG_INLINE_HINT_TOP_SPACING = 4.dp
-private val RULE_CONFIG_INLINE_HINT_BOTTOM_SPACING = 8.dp
 
 @Composable
 fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack: (modified: Boolean) -> Unit = {}) {
@@ -242,6 +260,17 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
         appName
     }
 
+    // 应用图标在 IO 线程读取；目标应用未装在主用户时没有图标
+    val appIcon by produceState<Drawable?>(null, packageName) {
+        value = withContext(Dispatchers.IO) {
+            try {
+                context.packageManager.getApplicationIcon(packageName)
+            } catch (_: PackageManager.NameNotFoundException) {
+                null
+            }
+        }
+    }
+
     browseRoute?.let { route ->
         PathBrowserPage(
             browserRepository = pathBrowserRepo,
@@ -253,7 +282,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
             onBack = {
                 // 恢复对话框 show 状态，弥补离开 composition 时的重置
                 when (route.target) {
-                    BrowseTarget.Path -> showPathDialog.value = true
+                    BrowseTarget.Path -> showPathDialog.value = route.isFromDialog
                     BrowseTarget.MappingTargetPath, BrowseTarget.MappingCurrentPath ->
                         showMappingDialog.value = true
                 }
@@ -372,7 +401,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                     .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .padding(horizontal = PAGE_HORIZONTAL_PADDING)
             ) {
-                // 重定向开关
+                // 重定向开关，带应用图标
                 item {
                     Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
                     Card(modifier = Modifier.fillMaxWidth()) {
@@ -381,6 +410,15 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                             summary = if (isRedirected) stringResource(R.string.rule_config_redirect_enabled)
                             else stringResource(R.string.rule_config_redirect_disabled),
                             checked = isRedirected,
+                            startAction = {
+                                AppIcon(
+                                    drawable = appIcon,
+                                    modifier = Modifier
+                                        .padding(end = RULE_CONFIG_APP_ICON_END_PADDING)
+                                        .size(RULE_CONFIG_APP_ICON_SIZE),
+                                    placeholderColor = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                )
+                            },
                             onCheckedChange = { enabled ->
                                 val newConfig = if (enabled) config.addApp(packageName)
                                 else config.removeApp(packageName)
@@ -394,43 +432,19 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                 if (sharedPackages.isNotEmpty()) {
                     item {
                         Spacer(Modifier.height(PAGE_ITEM_GAP))
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.padding(RULE_CONFIG_CARD_CONTENT_PADDING)) {
-                                Text(
-                                    text = stringResource(R.string.rule_config_shared_uid_title),
-                                    style = MiuixTheme.textStyles.title4,
-                                    color = MiuixTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.height(RULE_CONFIG_ITEM_SPACING))
-                                Text(
-                                    text = stringResource(R.string.rule_config_shared_uid_hint),
-                                    style = MiuixTheme.textStyles.body2,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                                )
-                                Spacer(Modifier.height(RULE_CONFIG_ITEM_SPACING))
-                                for (pkg in sharedPackages) {
-                                    Text(
-                                        text = "· $pkg",
-                                        style = MiuixTheme.textStyles.body2,
-                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                                    )
-                                }
-                            }
-                        }
+                        SharedUidCard(sharedPackages)
                     }
                 }
 
-                // 允许访问路径
+                // 允许访问路径：规则说明收进标题右侧 ⓘ，添加与浏览固定在卡片底部
                 item {
-                    SectionHeader(
-                        title = "${stringResource(R.string.rule_config_allowed_paths)} (${allowedPaths.size})",
+                    SectionTitle(
+                        title = stringResource(
+                            R.string.rule_config_section_count,
+                            stringResource(R.string.rule_config_allowed_paths),
+                            allowedPaths.size,
+                        ),
                         onInfo = { showAllowedPathHint = !showAllowedPathHint },
-                        onAdd = {
-                            pathDialogIndex = null
-                            dialogPathInput = ""
-                            pathDialogErrorResId = null
-                            showPathDialog.value = true
-                        }
                     )
                 }
                 item {
@@ -439,145 +453,129 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut()
                     ) {
-                        Column {
-                            Spacer(Modifier.height(RULE_CONFIG_INLINE_HINT_TOP_SPACING))
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = stringResource(R.string.rule_config_allowed_paths_rule_hint),
-                                    style = MiuixTheme.textStyles.body2,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                    modifier = Modifier.padding(RULE_CONFIG_CARD_CONTENT_PADDING)
-                                )
-                            }
-                            Spacer(Modifier.height(RULE_CONFIG_INLINE_HINT_BOTTOM_SPACING))
+                        Card(modifier = Modifier.fillMaxWidth().padding(bottom = PAGE_ITEM_GAP)) {
+                            Text(
+                                text = stringResource(R.string.rule_config_allowed_paths_rule_hint),
+                                style = MiuixTheme.textStyles.body2,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                modifier = Modifier.padding(RULE_CONFIG_CARD_CONTENT_PADDING)
+                            )
                         }
                     }
                 }
-
-                if (allowedPaths.isEmpty()) {
-                    item { EmptyPlaceholder(stringResource(R.string.rule_config_no_paths)) }
-                } else {
-                    itemsIndexed(allowedPaths) { index, path ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(
-                                        horizontal = RULE_CONFIG_CARD_CONTENT_PADDING,
-                                        vertical = RULE_CONFIG_LIST_ROW_VERTICAL_PADDING
-                                    ),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = path,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                IconButton(onClick = {
+                item {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        if (allowedPaths.isEmpty()) {
+                            EmptyRow(stringResource(R.string.rule_config_no_paths))
+                        }
+                        allowedPaths.forEachIndexed { index, path ->
+                            AllowedPathRow(
+                                path = path,
+                                onClick = {
                                     pathDialogIndex = index
                                     dialogPathInput = path
                                     pathDialogErrorResId = null
                                     showPathDialog.value = true
-                                }) {
-                                    Icon(AppIcons.Edit, contentDescription = stringResource(R.string.common_edit))
-                                }
-                                IconButton(onClick = {
+                                },
+                                onDelete = {
                                     deleteTarget = DeleteTarget.Path(index)
                                     showDeleteDialog.value = true
-                                }) {
-                                    Icon(
-                                        AppIcons.Delete,
-                                        contentDescription = stringResource(R.string.common_delete),
-                                        tint = MiuixTheme.colorScheme.error
-                                    )
-                                }
-                            }
+                                },
+                            )
                         }
-                        Spacer(Modifier.height(RULE_CONFIG_ITEM_SPACING))
+                        CardActionRow {
+                            CardActionButton(
+                                icon = AppIcons.Add,
+                                text = stringResource(R.string.rule_config_add_path),
+                                onClick = {
+                                    pathDialogIndex = null
+                                    dialogPathInput = ""
+                                    pathDialogErrorResId = null
+                                    showPathDialog.value = true
+                                },
+                                modifier = Modifier.testTag("rule_config_add_path"),
+                            )
+                            VerticalDivider(
+                                modifier = Modifier.padding(vertical = RULE_CONFIG_ACTION_DIVIDER_PADDING),
+                                color = MiuixTheme.colorScheme.dividerLine,
+                            )
+                            CardActionButton(
+                                icon = AppIcons.Folder,
+                                text = stringResource(R.string.rule_config_browse),
+                                onClick = {
+                                    pathDialogIndex = null
+                                    dialogPathInput = ""
+                                    pathDialogErrorResId = null
+                                    browseRoute = PathBrowseRoute(BrowseTarget.Path, isFromDialog = false)
+                                },
+                                modifier = Modifier.testTag("rule_config_browse_paths"),
+                            )
+                        }
                     }
                 }
 
                 // 路径映射
                 item {
-                    SectionHeader(
-                        title = "${stringResource(R.string.rule_config_path_mappings)} (${pathMappings.size})",
-                        onAdd = {
-                            mappingDialogIndex = null
-                            dialogMappingRequestPathInput = ""
-                            dialogMappingFinalPathInput = ""
-                            mappingDialogErrorResId = null
-                            showMappingDialog.value = true
-                        }
+                    SectionTitle(
+                        title = stringResource(
+                            R.string.rule_config_section_count,
+                            stringResource(R.string.rule_config_path_mappings),
+                            pathMappings.size,
+                        ),
                     )
                 }
-
-                if (pathMappings.isEmpty()) {
-                    item { EmptyPlaceholder(stringResource(R.string.rule_config_no_mappings)) }
-                } else {
-                    itemsIndexed(pathMappings) { index, mapping ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(
-                                        horizontal = RULE_CONFIG_CARD_CONTENT_PADDING,
-                                        vertical = RULE_CONFIG_LIST_ROW_VERTICAL_PADDING
-                                    ),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "${stringResource(R.string.rule_config_mapping_request_path)}: ${mapping.requestPath}",
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(Modifier.height(RULE_CONFIG_MAPPING_SUBTITLE_TOP_SPACING))
-                                    Text(
-                                        text = "${stringResource(R.string.rule_config_mapping_final_path)}: ${mapping.finalPath}",
-                                        style = MiuixTheme.textStyles.body2,
-                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                IconButton(onClick = {
+                item {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        if (pathMappings.isEmpty()) {
+                            EmptyRow(stringResource(R.string.rule_config_no_mappings))
+                        }
+                        pathMappings.forEachIndexed { index, mapping ->
+                            PathMappingRow(
+                                requestPath = mapping.requestPath,
+                                finalPath = mapping.finalPath,
+                                onClick = {
                                     mappingDialogIndex = index
                                     dialogMappingRequestPathInput = mapping.requestPath
                                     dialogMappingFinalPathInput = mapping.finalPath
                                     mappingDialogErrorResId = null
                                     showMappingDialog.value = true
-                                }) {
-                                    Icon(AppIcons.Edit, contentDescription = stringResource(R.string.common_edit))
-                                }
-                                IconButton(onClick = {
+                                },
+                                onDelete = {
                                     deleteTarget = DeleteTarget.Mapping(index)
                                     showDeleteDialog.value = true
-                                }) {
-                                    Icon(
-                                        AppIcons.Delete,
-                                        contentDescription = stringResource(R.string.common_delete),
-                                        tint = MiuixTheme.colorScheme.error
-                                    )
-                                }
-                            }
+                                },
+                            )
                         }
-                        Spacer(Modifier.height(RULE_CONFIG_ITEM_SPACING))
+                        CardActionRow {
+                            CardActionButton(
+                                icon = AppIcons.Add,
+                                text = stringResource(R.string.rule_config_add_mapping),
+                                onClick = {
+                                    mappingDialogIndex = null
+                                    dialogMappingRequestPathInput = ""
+                                    dialogMappingFinalPathInput = ""
+                                    mappingDialogErrorResId = null
+                                    showMappingDialog.value = true
+                                },
+                                modifier = Modifier.testTag("rule_config_add_mapping"),
+                            )
+                        }
                     }
                 }
 
                 // 提示信息
                 item {
-                    Spacer(Modifier.height(RULE_CONFIG_HINT_SECTION_SPACING))
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = stringResource(R.string.rule_config_restart_hint),
-                            style = MiuixTheme.textStyles.body2,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            modifier = Modifier.padding(RULE_CONFIG_CARD_CONTENT_PADDING)
-                        )
-                    }
-                    Spacer(Modifier.height(RULE_CONFIG_HINT_SECTION_SPACING))
+                    Text(
+                        text = stringResource(R.string.rule_config_restart_hint),
+                        modifier = Modifier.padding(
+                            start = RULE_CONFIG_CARD_CONTENT_PADDING,
+                            end = RULE_CONFIG_CARD_CONTENT_PADDING,
+                            top = PAGE_GROUP_GAP,
+                            bottom = PAGE_GROUP_GAP,
+                        ),
+                        fontSize = 13.sp,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
                 }
             }
         }
@@ -1016,50 +1014,180 @@ private sealed class DeleteTarget {
     data class Mapping(val index: Int) : DeleteTarget()
 }
 
-// 区块标题（可选信息按钮与添加按钮）
+// 区块标题，可带右侧说明按钮
 @Composable
-private fun SectionHeader(title: String, onAdd: () -> Unit, onInfo: (() -> Unit)? = null) {
-    Spacer(Modifier.height(RULE_CONFIG_HEADER_TOP_SPACING))
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = RULE_CONFIG_HEADER_BOTTOM_SPACING),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
+private fun SectionTitle(title: String, onInfo: (() -> Unit)? = null) {
+    Spacer(Modifier.height(PAGE_GROUP_GAP))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        SmallTitle(
             text = title,
-            style = MiuixTheme.textStyles.title4,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            insideMargin = PaddingValues(horizontal = RULE_CONFIG_CARD_CONTENT_PADDING, vertical = 8.dp),
         )
         onInfo?.let {
-            IconButton(onClick = it) {
-                Icon(
-                    AppIcons.Info,
-                    contentDescription = stringResource(R.string.rule_config_allowed_paths_rule_hint_desc),
-                    tint = MiuixTheme.colorScheme.primary
-                )
-            }
-        }
-        IconButton(onClick = onAdd) {
             Icon(
-                AppIcons.Add,
-                contentDescription = stringResource(R.string.common_add),
-                tint = MiuixTheme.colorScheme.primary
+                AppIcons.Info,
+                contentDescription = stringResource(R.string.rule_config_allowed_paths_rule_hint_desc),
+                tint = MiuixTheme.colorScheme.primary,
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = it)
+                    .padding(6.dp)
+                    .size(18.dp),
             )
         }
     }
 }
 
-// 空列表占位
 @Composable
-private fun EmptyPlaceholder(text: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier.fillMaxWidth().padding(RULE_CONFIG_EMPTY_PLACEHOLDER_PADDING),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+private fun SharedUidCard(sharedPackages: List<String>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(color = STATUS_WARNING_COLOR.copy(alpha = RULE_CONFIG_WARNING_CARD_ALPHA)),
+        insideMargin = PaddingValues(RULE_CONFIG_CARD_CONTENT_PADDING),
+    ) {
+        Text(
+            text = stringResource(R.string.rule_config_shared_uid_title),
+            style = MiuixTheme.textStyles.title4,
+            color = STATUS_WARNING_COLOR,
+        )
+        Text(
+            text = stringResource(R.string.rule_config_shared_uid_hint),
+            modifier = Modifier.padding(vertical = RULE_CONFIG_ITEM_SPACING),
+            style = MiuixTheme.textStyles.body2,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        )
+        for (pkg in sharedPackages) {
+            Text(
+                text = "· $pkg",
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
         }
+    }
+}
+
+// 排除规则去掉 ! 前缀，改用红色标签标出
+@Composable
+private fun AllowedPathRow(path: String, onClick: () -> Unit, onDelete: () -> Unit) {
+    val isExcluded = path.startsWith("!")
+    RuleRow(onClick = onClick, onDelete = onDelete) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = path.removePrefix("!"),
+                modifier = Modifier.weight(1f, fill = false),
+                fontFamily = FontFamily.Monospace,
+                fontSize = 14.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (isExcluded) {
+                StatusTag(
+                    label = stringResource(R.string.rule_config_tag_excluded),
+                    color = MiuixTheme.colorScheme.error,
+                    modifier = Modifier.padding(start = 6.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PathMappingRow(requestPath: String, finalPath: String, onClick: () -> Unit, onDelete: () -> Unit) {
+    RuleRow(onClick = onClick, onDelete = onDelete) {
+        Text(
+            text = requestPath,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 14.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = "→ $finalPath",
+            modifier = Modifier.padding(top = 2.dp),
+            fontFamily = FontFamily.Monospace,
+            fontSize = 12.sp,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+// 卡片内的规则行：点按编辑，右侧删除
+@Composable
+private fun RuleRow(onClick: () -> Unit, onDelete: () -> Unit, content: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = RULE_CONFIG_CARD_CONTENT_PADDING, end = 4.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(vertical = 8.dp)) {
+            content()
+        }
+        IconButton(onClick = onDelete) {
+            Icon(
+                AppIcons.Delete,
+                contentDescription = stringResource(R.string.common_delete),
+                modifier = Modifier.size(20.dp),
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyRow(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(RULE_CONFIG_EMPTY_PLACEHOLDER_PADDING),
+        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        textAlign = TextAlign.Center,
+    )
+}
+
+// 卡片底部的操作行，顶部以分隔线与内容隔开
+@Composable
+private fun CardActionRow(content: @Composable RowScope.() -> Unit) {
+    HorizontalDivider(color = MiuixTheme.colorScheme.dividerLine)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(RULE_CONFIG_ACTION_ROW_HEIGHT),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content,
+    )
+}
+
+@Composable
+private fun RowScope.CardActionButton(
+    icon: ImageVector,
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val primary = MiuixTheme.colorScheme.primary
+    Row(
+        modifier = modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = primary)
+        Text(
+            text = text,
+            modifier = Modifier.padding(start = 6.dp),
+            color = primary,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
 
@@ -1081,8 +1209,10 @@ private enum class BrowseTarget {
     MappingCurrentPath,
 }
 
+// 从卡片底部直接浏览时，返回不再弹出添加路径对话框
 private data class PathBrowseRoute(
     val target: BrowseTarget,
+    val isFromDialog: Boolean = true,
 )
 
 // 模板选择条目
