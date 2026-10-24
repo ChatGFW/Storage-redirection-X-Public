@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -46,22 +47,23 @@ import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 import com.storage.redirect.x.R
 import com.storage.redirect.x.ui.icon.AppIcons
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
+import com.storage.redirect.x.ui.component.SrxBackButton
+import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.component.bottombar.BottomBarAppearanceState
 import com.storage.redirect.x.ui.component.miuix.ScaleDialog
 import com.storage.redirect.x.ui.theme.AppThemeSettings
 import com.storage.redirect.x.ui.theme.ColorMode
 import com.storage.redirect.x.ui.theme.keyColorOptions
-import com.storage.redirect.x.ui.util.BlurredBar
+import com.storage.redirect.x.ui.util.LocalTopBarBackdrop
 import com.storage.redirect.x.ui.util.rememberTopBarBackdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.preference.ArrowPreference
@@ -82,26 +84,15 @@ fun ColorPalettePageMiuix(
 
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
     val backdrop = rememberTopBarBackdrop(themeSettings.enableBlur)
-    val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
     val colorMode = themeSettings.colorMode
     val isDark = colorMode.isDark || colorMode.isSystem && isSystemInDarkTheme()
 
     Scaffold(
         topBar = {
-            BlurredBar(backdrop) {
-                TopAppBar(
-                    color = barColor,
+            CompositionLocalProvider(LocalTopBarBackdrop provides backdrop) {
+                SrxTopAppBar(
                     title = stringResource(R.string.theme_title),
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = AppIcons.Back,
-                                contentDescription = null,
-                                tint = colorScheme.onBackground,
-                            )
-                        }
-                    },
+                    navigationIcon = { SrxBackButton(onClick = onBack) },
                     scrollBehavior = scrollBehavior,
                 )
             }
@@ -114,7 +105,7 @@ fun ColorPalettePageMiuix(
                 modifier = Modifier
                     .fillMaxHeight()
                     .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = PAGE_HORIZONTAL_PADDING),
                 contentPadding = innerPadding,
             ) {
                 item {

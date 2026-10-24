@@ -257,6 +257,7 @@
     <string name="common_ok">确定</string>
     <string name="common_cancel">取消</string>
     <string name="common_close">关闭</string>
+    <string name="common_back">返回</string>
     <string name="common_delete">删除</string>
     <string name="common_edit">编辑</string>
     <string name="common_add">添加</string>
@@ -280,7 +281,6 @@
     <string name="browser_allow_hint">添加允许访问的目录</string>
     <string name="browser_exclude_hint">排除不需要访问的目录</string>
     <string name="browser_location_hint">选择路径映射的位置</string>
-    <string name="browser_back">返回上一级或退出</string>
     <string name="browser_settings">浏览设置</string>
     <string name="browser_storage">内部存储</string>
     <string name="browser_private_storage">应用私有目录</string>

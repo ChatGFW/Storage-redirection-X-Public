@@ -34,6 +34,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -54,8 +55,11 @@ import com.storage.redirect.x.data.repository.PathBrowserRepository
 import com.storage.redirect.x.data.repository.SharedUidRepository
 import com.storage.redirect.x.data.repository.TemplateApplyMode
 import com.storage.redirect.x.data.repository.TemplateRepository
-import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
-import com.storage.redirect.x.ui.component.SrxSmallTopAppBar
+import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
+import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
+import com.storage.redirect.x.ui.component.SrxBackButton
+import com.storage.redirect.x.ui.component.SrxTopAppBar
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -64,17 +68,17 @@ import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 // 页面间距：列表横向边距，区块间距，行内边距，弹窗字段间距与提示卡片间距
-private val RULE_CONFIG_PAGE_HORIZONTAL_PADDING = 16.dp
-private val RULE_CONFIG_SECTION_TOP_SPACING = 8.dp
 private val RULE_CONFIG_ITEM_SPACING = 4.dp
 private val RULE_CONFIG_CARD_CONTENT_PADDING = 16.dp
 private val RULE_CONFIG_LIST_ROW_VERTICAL_PADDING = 12.dp
@@ -304,18 +308,13 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
         return
     }
 
+    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
     Scaffold(
         topBar = {
-            SrxSmallTopAppBar(
+            SrxTopAppBar(
                 title = decodedAppName,
-                navigationIcon = {
-                    IconButton(
-                        onClick = { onBack(hasModified) },
-                        modifier = Modifier.padding(start = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                    ) {
-                        Icon(AppIcons.Back, contentDescription = null)
-                    }
-                },
+                subtitle = packageName,
+                navigationIcon = { SrxBackButton(onClick = { onBack(hasModified) }) },
                 actions = {
                     IconButton(
                         onClick = {
@@ -324,9 +323,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                             showTemplatePicker.value = true
                         },
                         enabled = !isLoading,
-                        modifier = Modifier
-                            .padding(end = RULE_CONFIG_ITEM_SPACING)
-                            .testTag("rule_config_apply_template"),
+                        modifier = Modifier.testTag("rule_config_apply_template"),
                     ) {
                         Icon(
                             AppIcons.Paste,
@@ -343,9 +340,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                             saveTemplateNameError = false
                             showSaveTemplateDialog.value = true
                         },
-                        modifier = Modifier
-                            .padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                            .testTag("rule_config_save_as_template"),
+                        modifier = Modifier.testTag("rule_config_save_as_template"),
                     ) {
                         Icon(
                             AppIcons.Save,
@@ -353,6 +348,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                         )
                     }
                 },
+                scrollBehavior = scrollBehavior,
             )
         }
     ) { padding ->
@@ -374,11 +370,12 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = RULE_CONFIG_PAGE_HORIZONTAL_PADDING)
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
+                    .padding(horizontal = PAGE_HORIZONTAL_PADDING)
             ) {
                 // 重定向开关
                 item {
-                    Spacer(Modifier.height(RULE_CONFIG_SECTION_TOP_SPACING))
+                    Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
                     Card(modifier = Modifier.fillMaxWidth()) {
                         SwitchPreference(
                             title = stringResource(R.string.rule_config_enable_redirect),
@@ -397,7 +394,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                 // 共享 UID 提示
                 if (sharedPackages.isNotEmpty()) {
                     item {
-                        Spacer(Modifier.height(RULE_CONFIG_SECTION_TOP_SPACING))
+                        Spacer(Modifier.height(PAGE_ITEM_GAP))
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.padding(RULE_CONFIG_CARD_CONTENT_PADDING)) {
                                 Text(
@@ -467,7 +464,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(
-                                        horizontal = RULE_CONFIG_PAGE_HORIZONTAL_PADDING,
+                                        horizontal = RULE_CONFIG_CARD_CONTENT_PADDING,
                                         vertical = RULE_CONFIG_LIST_ROW_VERTICAL_PADDING
                                     ),
                                 verticalAlignment = Alignment.CenterVertically
@@ -525,7 +522,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(
-                                        horizontal = RULE_CONFIG_PAGE_HORIZONTAL_PADDING,
+                                        horizontal = RULE_CONFIG_CARD_CONTENT_PADDING,
                                         vertical = RULE_CONFIG_LIST_ROW_VERTICAL_PADDING
                                     ),
                                 verticalAlignment = Alignment.CenterVertically

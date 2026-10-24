@@ -48,15 +48,3 @@ fun Modifier.surfaceBlur(
         ),
     )
 }
-
-@Composable
-fun BlurredBar(
-    backdrop: LayerBackdrop?,
-    content: @Composable () -> Unit,
-) {
-    androidx.compose.foundation.layout.Box(
-        modifier = Modifier.surfaceBlur(backdrop),
-    ) {
-        content()
-    }
-}

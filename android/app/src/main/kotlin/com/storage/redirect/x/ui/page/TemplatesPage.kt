@@ -27,6 +27,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,21 +39,24 @@ import com.storage.redirect.x.data.model.RedirectConfig
 import com.storage.redirect.x.data.model.RedirectTemplate
 import com.storage.redirect.x.data.model.StoragePathMapping
 import com.storage.redirect.x.data.repository.TemplateRepository
-import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
-import com.storage.redirect.x.ui.component.SrxSmallTopAppBar
+import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
+import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
+import com.storage.redirect.x.ui.component.SrxBackButton
+import com.storage.redirect.x.ui.component.SrxTopAppBar
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private val TEMPLATE_PAGE_HORIZONTAL_PADDING = 16.dp
-private val TEMPLATE_SECTION_TOP_SPACING = 8.dp
 private val TEMPLATE_ITEM_SPACING = 4.dp
 private val TEMPLATE_CARD_CONTENT_PADDING = 16.dp
 private val TEMPLATE_LIST_ROW_VERTICAL_PADDING = 12.dp
@@ -95,21 +99,15 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
     }
 
     BackHandler { onBack() }
+    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
         modifier = Modifier.testTag("page_templates"),
         topBar = {
-            SrxSmallTopAppBar(
+            SrxTopAppBar(
                 title = stringResource(R.string.templates_title),
                 navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier
-                            .padding(start = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                            .testTag("templates_back_button"),
-                    ) {
-                        Icon(AppIcons.Back, contentDescription = null)
-                    }
+                    SrxBackButton(onClick = onBack, modifier = Modifier.testTag("templates_back_button"))
                 },
                 actions = {
                     IconButton(
@@ -118,9 +116,7 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                             nameDialogError = false
                             showNameDialog = true
                         },
-                        modifier = Modifier
-                            .padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                            .testTag("templates_add_button"),
+                        modifier = Modifier.testTag("templates_add_button"),
                     ) {
                         Icon(
                             AppIcons.Add,
@@ -129,6 +125,7 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                         )
                     }
                 },
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { padding ->
@@ -137,7 +134,7 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = TEMPLATE_PAGE_HORIZONTAL_PADDING),
+                    .padding(horizontal = PAGE_HORIZONTAL_PADDING),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -150,9 +147,10 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = TEMPLATE_PAGE_HORIZONTAL_PADDING),
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
+                    .padding(horizontal = PAGE_HORIZONTAL_PADDING),
             ) {
-                item { Spacer(Modifier.height(TEMPLATE_SECTION_TOP_SPACING)) }
+                item { Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING)) }
                 items(templates, key = { it.id }) { template ->
                     Card(
                         modifier = Modifier
@@ -163,7 +161,7 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(
-                                    horizontal = TEMPLATE_PAGE_HORIZONTAL_PADDING,
+                                    horizontal = TEMPLATE_CARD_CONTENT_PADDING,
                                     vertical = TEMPLATE_LIST_ROW_VERTICAL_PADDING,
                                 ),
                             verticalAlignment = Alignment.CenterVertically,
@@ -205,7 +203,7 @@ fun TemplatesPage(onBack: () -> Unit = {}) {
                             }
                         }
                     }
-                    Spacer(Modifier.height(TEMPLATE_ITEM_SPACING))
+                    Spacer(Modifier.height(PAGE_ITEM_GAP))
                 }
                 item { Spacer(Modifier.height(TEMPLATE_HINT_SECTION_SPACING)) }
             }
@@ -312,21 +310,15 @@ private fun TemplateEditorPage(
     }
 
     BackHandler { onBack() }
+    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
         modifier = Modifier.testTag("page_template_editor"),
         topBar = {
-            SrxSmallTopAppBar(
+            SrxTopAppBar(
                 title = currentTemplate.name,
                 navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier
-                            .padding(start = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                            .testTag("template_editor_back_button"),
-                    ) {
-                        Icon(AppIcons.Back, contentDescription = null)
-                    }
+                    SrxBackButton(onClick = onBack, modifier = Modifier.testTag("template_editor_back_button"))
                 },
                 actions = {
                     IconButton(
@@ -335,13 +327,12 @@ private fun TemplateEditorPage(
                             renameError = false
                             showRenameDialog = true
                         },
-                        modifier = Modifier
-                            .padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                            .testTag("template_rename_button"),
+                        modifier = Modifier.testTag("template_rename_button"),
                     ) {
                         Icon(AppIcons.Edit, contentDescription = stringResource(R.string.common_edit))
                     }
                 },
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { padding ->
@@ -349,7 +340,8 @@ private fun TemplateEditorPage(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = TEMPLATE_PAGE_HORIZONTAL_PADDING),
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .padding(horizontal = PAGE_HORIZONTAL_PADDING),
         ) {
             item {
                 TemplateSectionHeader(
@@ -709,7 +701,7 @@ private fun TemplateRuleRow(text: String, onEdit: () -> Unit, onDelete: () -> Un
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    horizontal = TEMPLATE_PAGE_HORIZONTAL_PADDING,
+                    horizontal = TEMPLATE_CARD_CONTENT_PADDING,
                     vertical = TEMPLATE_LIST_ROW_VERTICAL_PADDING,
                 ),
             verticalAlignment = Alignment.CenterVertically,
@@ -752,7 +744,7 @@ private fun TemplateMappingRow(mapping: StoragePathMapping, index: Int, onEdit: 
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    horizontal = TEMPLATE_PAGE_HORIZONTAL_PADDING,
+                    horizontal = TEMPLATE_CARD_CONTENT_PADDING,
                     vertical = TEMPLATE_LIST_ROW_VERTICAL_PADDING,
                 ),
             verticalAlignment = Alignment.CenterVertically,

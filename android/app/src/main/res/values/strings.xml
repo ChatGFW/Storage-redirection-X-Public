@@ -266,6 +266,7 @@
     <string name="common_ok">OK</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_close">Close</string>
+    <string name="common_back">Back</string>
     <string name="common_delete">Delete</string>
     <string name="common_edit">Edit</string>
     <string name="common_add">Add</string>
@@ -289,7 +290,6 @@
     <string name="browser_allow_hint">Add folders the app can access</string>
     <string name="browser_exclude_hint">Exclude folders from access</string>
     <string name="browser_location_hint">Choose a location for the path mapping</string>
-    <string name="browser_back">Back to parent or return</string>
     <string name="browser_settings">Browse settings</string>
     <string name="browser_storage">Internal storage</string>
     <string name="browser_private_storage">App private storage</string>

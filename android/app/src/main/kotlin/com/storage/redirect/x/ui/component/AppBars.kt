@@ -1,41 +1,48 @@
 package com.storage.redirect.x.ui.component
 
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.ui.util.LocalTopBarBackdrop
 import com.storage.redirect.x.ui.util.surfaceBlur
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-val SRX_TOP_BAR_TRAILING_ICON_END_PADDING = 8.dp
+// 页面骨架间距：顶栏下留白、内容左右边距、分组间距、列表项间距
+val PAGE_CONTENT_TOP_PADDING = 10.dp
+val PAGE_HORIZONTAL_PADDING = 12.dp
+val PAGE_GROUP_GAP = 12.dp
+val PAGE_ITEM_GAP = 8.dp
 
-// 顶栏模糊开启时经 backdrop 采样内容，关闭时行为与 miuix TopAppBar 一致
+// 顶栏模糊开启时经 backdrop 采样内容，关闭时行为与 miuix TopAppBar 一致；边距沿用 miuix 默认值
 @Composable
 fun SrxTopAppBar(
     title: String,
     modifier: Modifier = Modifier,
+    subtitle: String = "",
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
     scrollBehavior: ScrollBehavior? = null,
-    horizontalPadding: Dp = 12.dp,
 ) {
     val backdrop = LocalTopBarBackdrop.current
     TopAppBar(
         title = title,
         modifier = modifier.surfaceBlur(backdrop),
         color = if (backdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface,
+        subtitle = subtitle,
         navigationIcon = navigationIcon,
         actions = actions,
         scrollBehavior = scrollBehavior,
-        titlePadding = horizontalPadding,
-        navigationIconPadding = horizontalPadding,
-        actionIconPadding = horizontalPadding,
     )
 }
 
@@ -46,7 +53,6 @@ fun SrxSmallTopAppBar(
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
     scrollBehavior: ScrollBehavior? = null,
-    horizontalPadding: Dp = 12.dp,
 ) {
     val backdrop = LocalTopBarBackdrop.current
     SmallTopAppBar(
@@ -56,8 +62,13 @@ fun SrxSmallTopAppBar(
         navigationIcon = navigationIcon,
         actions = actions,
         scrollBehavior = scrollBehavior,
-        titlePadding = horizontalPadding,
-        navigationIconPadding = horizontalPadding,
-        actionIconPadding = horizontalPadding,
     )
+}
+
+// 二级页返回键：在 miuix 导航区 16dp 之外再留 12dp
+@Composable
+fun SrxBackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    IconButton(onClick = onClick, modifier = modifier.padding(start = 12.dp)) {
+        Icon(AppIcons.Back, contentDescription = stringResource(R.string.common_back))
+    }
 }

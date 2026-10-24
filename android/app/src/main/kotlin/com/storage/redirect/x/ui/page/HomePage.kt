@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -34,7 +35,9 @@ import com.storage.redirect.x.data.cache.HomeDataCache
 import com.storage.redirect.x.data.repository.ConfigRepository
 import com.storage.redirect.x.data.repository.ModuleRepository
 import com.storage.redirect.x.data.service.RootService
-import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
+import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.component.StatusCard
 import com.storage.redirect.x.ui.icon.AppIcons
@@ -56,11 +59,7 @@ import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-// 页面间距：顶栏下留白，区块间距，卡片横向边距，信息卡正文内边距与收尾间距
-private val HOME_PAGE_TOP_SPACING = 6.dp
-private val HOME_PAGE_SECTION_SPACING = 12.dp
-private val HOME_PAGE_HORIZONTAL_PADDING = 12.dp
-private val HOME_PAGE_BOTTOM_SPACING = 12.dp
+// 信息卡正文间距与内边距，弹出菜单边距，对话框按钮间距
 private val HOME_INFO_TEXT_TOP_SPACING = 2.dp
 private val HOME_INFO_TEXT_DEFAULT_BOTTOM_SPACING = 24.dp
 private val HOME_INFO_TEXT_NO_BOTTOM_SPACING = 0.dp
@@ -149,10 +148,7 @@ private fun HomePageMiuix(
             scrollBehavior = scrollBehavior,
             actions = {
                 Box {
-                    IconButton(
-                        onClick = { showActionsMenu.value = true },
-                        modifier = Modifier.padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                    ) {
+                    IconButton(onClick = { showActionsMenu.value = true }) {
                         Icon(
                             imageVector = AppIcons.Restart,
                             contentDescription = stringResource(R.string.home_actions_menu)
@@ -185,9 +181,10 @@ private fun HomePageMiuix(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(Modifier.height(HOME_PAGE_TOP_SPACING))
+            Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
 
             // 模块状态卡片
             StatusCard(
@@ -196,15 +193,15 @@ private fun HomePageMiuix(
                 redirectedAppsCount = HomeDataCache.redirectedAppsCount,
                 redirectCount = HomeDataCache.redirectCount.toString(),
                 themeMode = themeMode,
-                modifier = Modifier.padding(horizontal = HOME_PAGE_HORIZONTAL_PADDING)
+                modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)
             )
 
-            Spacer(Modifier.height(HOME_PAGE_SECTION_SPACING))
+            Spacer(Modifier.height(PAGE_GROUP_GAP))
 
             // 设备信息
             InfoCard()
 
-            Spacer(Modifier.height(HOME_PAGE_BOTTOM_SPACING + bottomInnerPadding))
+            Spacer(Modifier.height(PAGE_GROUP_GAP + bottomInnerPadding))
         }
     }
 
@@ -260,7 +257,7 @@ private fun InfoCard() {
         )
     }
 
-    Card(modifier = Modifier.padding(horizontal = HOME_PAGE_HORIZONTAL_PADDING)) {
+    Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

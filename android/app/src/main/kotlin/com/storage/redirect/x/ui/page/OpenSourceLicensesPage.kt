@@ -10,17 +10,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import android.content.Intent
 import androidx.core.net.toUri
 import com.storage.redirect.x.R
-import com.storage.redirect.x.ui.icon.AppIcons
+import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
+import com.storage.redirect.x.ui.component.SrxBackButton
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
@@ -116,14 +119,8 @@ private val nativeLibraries = listOf(
     )
 )
 
-// 页面间距：顶栏下留白，区块间距，卡片横向边距，底部收尾间距
-private val LICENSES_PAGE_TOP_SPACING = 6.dp
-private val LICENSES_PAGE_SECTION_SPACING = 12.dp
-private val LICENSES_PAGE_HORIZONTAL_PADDING = 12.dp
-private val LICENSES_PAGE_BOTTOM_SPACING = 12.dp
-
 @Composable
-fun OpenSourceLicensesPage(onBack: () -> Unit) {
+fun OpenSourceLicensesPage(onBack: () -> Unit, bottomInnerPadding: Dp = 0.dp) {
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
 
@@ -137,23 +134,20 @@ fun OpenSourceLicensesPage(onBack: () -> Unit) {
         SrxTopAppBar(
             title = stringResource(R.string.settings_open_source_licenses),
             scrollBehavior = scrollBehavior,
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(AppIcons.Back, contentDescription = stringResource(R.string.common_close))
-                }
-            }
+            navigationIcon = { SrxBackButton(onClick = onBack) },
         )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(Modifier.height(LICENSES_PAGE_TOP_SPACING))
+            Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
 
             SmallTitle(text = stringResource(R.string.settings_android_libraries))
 
-            Card(modifier = Modifier.padding(horizontal = LICENSES_PAGE_HORIZONTAL_PADDING)) {
+            Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
                 androidLibraries.forEach { lib ->
                     ArrowPreference(
                         title = lib.name,
@@ -163,11 +157,11 @@ fun OpenSourceLicensesPage(onBack: () -> Unit) {
                 }
             }
 
-            Spacer(Modifier.height(LICENSES_PAGE_SECTION_SPACING))
+            Spacer(Modifier.height(PAGE_GROUP_GAP))
 
             SmallTitle(text = stringResource(R.string.settings_native_libraries))
 
-            Card(modifier = Modifier.padding(horizontal = LICENSES_PAGE_HORIZONTAL_PADDING)) {
+            Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
                 nativeLibraries.forEach { lib ->
                     ArrowPreference(
                         title = lib.name,
@@ -177,7 +171,7 @@ fun OpenSourceLicensesPage(onBack: () -> Unit) {
                 }
             }
 
-            Spacer(Modifier.height(LICENSES_PAGE_BOTTOM_SPACING))
+            Spacer(Modifier.height(PAGE_GROUP_GAP + bottomInnerPadding))
         }
     }
 }

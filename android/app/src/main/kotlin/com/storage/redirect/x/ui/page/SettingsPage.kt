@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
@@ -33,6 +34,9 @@ import com.storage.redirect.x.data.cache.AppPreferences
 import com.storage.redirect.x.data.cache.PreferenceKeys
 import com.storage.redirect.x.ui.component.bottombar.BottomBarAppearanceState
 import com.storage.redirect.x.util.BackupRestoreNotifier
+import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.theme.AppThemeSettings
 import top.yukonga.miuix.kmp.basic.Card
@@ -42,12 +46,6 @@ import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
-
-// 页面间距：顶栏下留白，区块间距，卡片横向边距，底部收尾间距
-private val SETTINGS_PAGE_TOP_SPACING = 6.dp
-private val SETTINGS_PAGE_SECTION_SPACING = 12.dp
-private val SETTINGS_PAGE_HORIZONTAL_PADDING = 12.dp
-private val SETTINGS_PAGE_BOTTOM_SPACING = 12.dp
 
 @Composable
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -136,12 +134,18 @@ private fun SettingsPageMiuix(
     val context = LocalContext.current
 
     if (uiState.isLogsPageVisible) {
-        LogsPage(onBack = { settingsViewModel.setLogsPageVisible(false) })
+        LogsPage(
+            onBack = { settingsViewModel.setLogsPageVisible(false) },
+            bottomInnerPadding = bottomInnerPadding,
+        )
         return
     }
 
     if (uiState.isLicensesPageVisible) {
-        OpenSourceLicensesPage(onBack = { settingsViewModel.setLicensesPageVisible(false) })
+        OpenSourceLicensesPage(
+            onBack = { settingsViewModel.setLicensesPageVisible(false) },
+            bottomInnerPadding = bottomInnerPadding,
+        )
         return
     }
 
@@ -203,14 +207,15 @@ private fun SettingsPageMiuix(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(Modifier.height(SETTINGS_PAGE_TOP_SPACING))
+            Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
 
             // 外观设置
             SmallTitle(text = stringResource(R.string.settings_appearance))
 
-            Card(modifier = Modifier.padding(horizontal = SETTINGS_PAGE_HORIZONTAL_PADDING)) {
+            Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
                 ArrowPreference(
                     title = stringResource(R.string.theme_title),
                     summary = stringResource(R.string.settings_theme_summary),
@@ -229,11 +234,11 @@ private fun SettingsPageMiuix(
                 )
             }
 
-            Spacer(Modifier.height(SETTINGS_PAGE_SECTION_SPACING))
+            Spacer(Modifier.height(PAGE_GROUP_GAP))
 
             SmallTitle(text = stringResource(R.string.settings_tools))
 
-            Card(modifier = Modifier.padding(horizontal = SETTINGS_PAGE_HORIZONTAL_PADDING)) {
+            Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
                 SwitchPreference(
                     title = stringResource(R.string.settings_fuse_fixer),
                     summary = rootActionSummary,
@@ -251,11 +256,11 @@ private fun SettingsPageMiuix(
                 )
             }
 
-            Spacer(Modifier.height(SETTINGS_PAGE_SECTION_SPACING))
+            Spacer(Modifier.height(PAGE_GROUP_GAP))
 
             SmallTitle(text = stringResource(R.string.settings_backup_restore))
 
-            Card(modifier = Modifier.padding(horizontal = SETTINGS_PAGE_HORIZONTAL_PADDING)) {
+            Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
                 ArrowPreference(
                     title = stringResource(R.string.settings_backup_title),
                     onClick = {
@@ -283,12 +288,12 @@ private fun SettingsPageMiuix(
                 )
             }
 
-            Spacer(Modifier.height(SETTINGS_PAGE_SECTION_SPACING))
+            Spacer(Modifier.height(PAGE_GROUP_GAP))
 
             // 关于
             SmallTitle(text = stringResource(R.string.settings_about))
 
-            Card(modifier = Modifier.padding(horizontal = SETTINGS_PAGE_HORIZONTAL_PADDING)) {
+            Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
                 ArrowPreference(
                     title = stringResource(R.string.settings_about),
                     summary = "v${BuildConfig.VERSION_NAME}",
@@ -308,7 +313,7 @@ private fun SettingsPageMiuix(
                 )
             }
 
-            Spacer(Modifier.height(SETTINGS_PAGE_BOTTOM_SPACING + bottomInnerPadding))
+            Spacer(Modifier.height(PAGE_GROUP_GAP + bottomInnerPadding))
         }
     }
 }

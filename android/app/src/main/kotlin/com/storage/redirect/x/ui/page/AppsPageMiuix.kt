@@ -48,7 +48,9 @@ import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
 import com.storage.redirect.x.data.model.RedirectTemplate
 import com.storage.redirect.x.data.repository.TemplateApplyMode
-import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
+import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
+import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.SrxSmallTopAppBar
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.icon.AppIcons
@@ -73,9 +75,6 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
 private val APPS_POPUP_MARGIN = 8.dp
-private val APPS_PAGE_TOP_SPACING = 6.dp
-private val APPS_ITEM_HORIZONTAL_PADDING = 12.dp
-private val APPS_ITEM_BOTTOM_SPACING = 12.dp
 private val APPS_ITEM_INSIDE_VERTICAL_PADDING = 8.dp
 private val APPS_ITEM_INSIDE_HORIZONTAL_PADDING = 16.dp
 private val APPS_ITEM_CONTENT_GAP = 14.dp
@@ -114,7 +113,7 @@ internal fun AppsPageMiuix(
             NormalTopBarMiuix(data = data, dialogs = dialogs, actions = actions)
         }
 
-        Spacer(Modifier.height(APPS_PAGE_TOP_SPACING))
+        Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
 
         SearchBar(
             inputField = {
@@ -214,9 +213,7 @@ private fun BatchTopBarMiuix(data: AppsPageData, actions: AppsPageActions) {
             }
             IconButton(
                 onClick = actions.onShowTemplatePicker,
-                modifier = Modifier
-                    .padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                    .testTag("apps_multi_select_apply_template"),
+                modifier = Modifier.testTag("apps_multi_select_apply_template"),
             ) {
                 Icon(AppIcons.Layers, contentDescription = stringResource(R.string.apps_apply_template))
             }
@@ -264,10 +261,7 @@ private fun NormalTopBarMiuix(
                 }
             }
             Box {
-                IconButton(
-                    onClick = { dialogs.showFilterMenu.value = true },
-                    modifier = Modifier.padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING),
-                ) {
+                IconButton(onClick = { dialogs.showFilterMenu.value = true }) {
                     Icon(AppIcons.More, contentDescription = stringResource(R.string.apps_filter))
                 }
                 OverlayListPopup(
@@ -567,8 +561,8 @@ private fun AppListItem(
 
     Card(
         modifier = modifier
-            .padding(horizontal = APPS_ITEM_HORIZONTAL_PADDING)
-            .padding(bottom = APPS_ITEM_BOTTOM_SPACING),
+            .padding(horizontal = PAGE_HORIZONTAL_PADDING)
+            .padding(bottom = PAGE_ITEM_GAP),
         pressFeedbackType = PressFeedbackType.Sink,
         showIndication = true,
         onClick = onClick,
@@ -696,8 +690,8 @@ private fun SkeletonListItem() {
 
     Card(
         modifier = Modifier
-            .padding(horizontal = APPS_ITEM_HORIZONTAL_PADDING)
-            .padding(bottom = APPS_ITEM_BOTTOM_SPACING),
+            .padding(horizontal = PAGE_HORIZONTAL_PADDING)
+            .padding(bottom = PAGE_ITEM_GAP),
         insideMargin = PaddingValues(
             vertical = APPS_ITEM_INSIDE_VERTICAL_PADDING,
             horizontal = APPS_ITEM_INSIDE_HORIZONTAL_PADDING,

@@ -22,24 +22,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.R
-import com.storage.redirect.x.ui.icon.AppIcons
 import java.util.Locale
 import com.storage.redirect.x.data.cache.AppPreferences
 import com.storage.redirect.x.data.cache.PreferenceKeys
 import com.storage.redirect.x.data.repository.UpdateRepository
 import com.storage.redirect.x.data.repository.UpdateResult
 import com.storage.redirect.x.ui.component.MarkdownText
-import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
+import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
+import com.storage.redirect.x.ui.component.SrxBackButton
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
@@ -50,10 +51,7 @@ import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-// 页面间距
-private val UPDATE_PAGE_TOP_SPACING = 6.dp
-private val UPDATE_PAGE_HORIZONTAL_PADDING = 12.dp
-private val UPDATE_PAGE_BOTTOM_SPACING = 12.dp
+// 更新对话框间距与更新说明最大高度
 private val UPDATE_DIALOG_CONTENT_SPACING = 12.dp
 private val UPDATE_DIALOG_BUTTON_SPACING = 12.dp
 private val UPDATE_RELEASE_NOTES_MAX_HEIGHT = 360.dp
@@ -83,24 +81,18 @@ fun UpdatePage(
         SrxTopAppBar(
             title = stringResource(R.string.settings_update),
             scrollBehavior = scrollBehavior,
-            navigationIcon = {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier.padding(start = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                ) {
-                    Icon(AppIcons.Back, contentDescription = stringResource(R.string.common_close))
-                }
-            }
+            navigationIcon = { SrxBackButton(onClick = onBack) },
         )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(Modifier.height(UPDATE_PAGE_TOP_SPACING))
+            Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
 
-            Card(modifier = Modifier.padding(horizontal = UPDATE_PAGE_HORIZONTAL_PADDING)) {
+            Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
                 SwitchPreference(
                     title = stringResource(R.string.settings_update_check_on_launch),
                     checked = checkOnLaunch,
@@ -136,7 +128,7 @@ fun UpdatePage(
                 )
             }
 
-            Spacer(Modifier.height(UPDATE_PAGE_BOTTOM_SPACING + bottomInnerPadding))
+            Spacer(Modifier.height(PAGE_GROUP_GAP + bottomInnerPadding))
         }
     }
 

@@ -31,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -49,7 +50,9 @@ import com.storage.redirect.x.data.model.FileMonitorEntry
 import com.storage.redirect.x.data.model.MonitorActionType
 import com.storage.redirect.x.data.model.MonitorResultState
 import com.storage.redirect.x.data.model.MonitorWriterType
-import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
+import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
+import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.icon.AppIcons
 import kotlinx.coroutines.Dispatchers
@@ -59,15 +62,13 @@ import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InputField
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SearchBar
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-// 页面间距：顶栏下留白，列表边距，卡片内边距，标签与正文间距
-private val FILE_MONITOR_PAGE_TOP_SPACING = 6.dp
-private val FILE_MONITOR_LIST_HORIZONTAL_PADDING = 16.dp
-private val FILE_MONITOR_LIST_VERTICAL_PADDING = 12.dp
-private val FILE_MONITOR_LIST_ITEM_SPACING = 12.dp
+// 条目卡片：内边距，标签与正文间距
 private val FILE_MONITOR_CARD_CONTENT_PADDING = 12.dp
 private val FILE_MONITOR_ROW_SPACING = 8.dp
 private val FILE_MONITOR_BADGE_CORNER_RADIUS = 4.dp
@@ -151,6 +152,7 @@ fun FileMonitorPage(
         }
     }
 
+    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -159,16 +161,14 @@ fun FileMonitorPage(
         SrxTopAppBar(
             title = stringResource(R.string.file_monitor_title),
             actions = {
-                IconButton(
-                    onClick = { monitorViewModel.refresh() },
-                    modifier = Modifier.padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                ) {
+                IconButton(onClick = { monitorViewModel.refresh() }) {
                     Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.file_monitor_refresh))
                 }
-            }
+            },
+            scrollBehavior = scrollBehavior,
         )
 
-        Spacer(Modifier.height(FILE_MONITOR_PAGE_TOP_SPACING))
+        Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
 
         if (isLoading) {
             Box(
@@ -217,12 +217,14 @@ fun FileMonitorPage(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = FILE_MONITOR_LIST_HORIZONTAL_PADDING),
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
                     contentPadding = PaddingValues(
-                        top = FILE_MONITOR_LIST_VERTICAL_PADDING,
-                        bottom = FILE_MONITOR_LIST_VERTICAL_PADDING + bottomInnerPadding,
+                        start = PAGE_HORIZONTAL_PADDING,
+                        top = PAGE_CONTENT_TOP_PADDING,
+                        end = PAGE_HORIZONTAL_PADDING,
+                        bottom = PAGE_CONTENT_TOP_PADDING + bottomInnerPadding,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(FILE_MONITOR_LIST_ITEM_SPACING)
+                    verticalArrangement = Arrangement.spacedBy(PAGE_ITEM_GAP)
                 ) {
                     items(filteredEntries) { entry ->
                         val subjectPackage = entry.subjectPackage

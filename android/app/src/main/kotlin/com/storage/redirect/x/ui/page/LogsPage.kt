@@ -35,17 +35,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.storage.redirect.x.R
 import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.data.repository.LogRepository
-import com.storage.redirect.x.ui.component.SRX_TOP_BAR_TRAILING_ICON_END_PADDING
+import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
+import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
+import com.storage.redirect.x.ui.component.SrxBackButton
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,17 +60,15 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SearchBar
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private const val LOG_LINE_COUNT = 500
-// 页面间距：顶栏下留白，列表边距，日志卡片内边距与类型标记间距
-private val LOGS_PAGE_TOP_SPACING = 6.dp
-private val LOGS_LIST_HORIZONTAL_PADDING = 16.dp
-private val LOGS_LIST_VERTICAL_PADDING = 12.dp
-private val LOGS_LIST_ITEM_SPACING = 12.dp
-private val LOGS_CARD_CORNER_RADIUS = 18.dp
+// 日志卡片：圆角与 miuix Card 一致，另含内边距与类型标记尺寸
+private val LOGS_CARD_CORNER_RADIUS = 16.dp
 private val LOGS_CARD_CONTENT_HORIZONTAL_PADDING = 12.dp
 private val LOGS_CARD_CONTENT_VERTICAL_PADDING = 10.dp
 private val LOGS_TYPE_INDICATOR_WIDTH = 4.dp
@@ -75,14 +78,13 @@ private val LOGS_TYPE_TEXT_SPACING = 8.dp
 private val LOGS_CONTENT_TOP_SPACING = 6.dp
 
 @Composable
-fun LogsPage(onBack: (() -> Unit)? = null) {
+fun LogsPage(onBack: () -> Unit, bottomInnerPadding: Dp = 0.dp) {
     val logRepo = remember { LogRepository() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
 
-    if (onBack != null) {
-        BackHandler(onBack = onBack)
-    }
+    BackHandler(onBack = onBack)
 
     var isLoading by remember { mutableStateOf(true) }
     var logLines by remember { mutableStateOf(emptyList<String>()) }
@@ -126,57 +128,26 @@ fun LogsPage(onBack: (() -> Unit)? = null) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        if (onBack != null) {
-            SrxTopAppBar(
-                title = stringResource(R.string.logs_title),
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.padding(start = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                    ) {
-                        Icon(AppIcons.Back, contentDescription = stringResource(R.string.common_close))
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            val fileName = "srx_logs_${System.currentTimeMillis()}.log"
-                            exportLauncher.launch(fileName)
-                        },
-                    ) {
-                        Icon(AppIcons.Export, contentDescription = stringResource(R.string.logs_export))
-                    }
-                    IconButton(
-                        onClick = { loadLogs() },
-                        modifier = Modifier.padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                    ) {
-                        Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.logs_refresh))
-                    }
+        SrxTopAppBar(
+            title = stringResource(R.string.logs_title),
+            navigationIcon = { SrxBackButton(onClick = onBack) },
+            actions = {
+                IconButton(
+                    onClick = {
+                        val fileName = "srx_logs_${System.currentTimeMillis()}.log"
+                        exportLauncher.launch(fileName)
+                    },
+                ) {
+                    Icon(AppIcons.Export, contentDescription = stringResource(R.string.logs_export))
                 }
-            )
-        } else {
-            SrxTopAppBar(
-                title = stringResource(R.string.logs_title),
-                actions = {
-                    IconButton(
-                        onClick = {
-                            val fileName = "srx_logs_${System.currentTimeMillis()}.log"
-                            exportLauncher.launch(fileName)
-                        },
-                    ) {
-                        Icon(AppIcons.Export, contentDescription = stringResource(R.string.logs_export))
-                    }
-                    IconButton(
-                        onClick = { loadLogs() },
-                        modifier = Modifier.padding(end = SRX_TOP_BAR_TRAILING_ICON_END_PADDING)
-                    ) {
-                        Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.logs_refresh))
-                    }
+                IconButton(onClick = { loadLogs() }) {
+                    Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.logs_refresh))
                 }
-            )
-        }
+            },
+            scrollBehavior = scrollBehavior,
+        )
 
-        Spacer(Modifier.height(LOGS_PAGE_TOP_SPACING))
+        Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
 
         if (isLoading) {
             Box(
@@ -227,9 +198,14 @@ fun LogsPage(onBack: (() -> Unit)? = null) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = LOGS_LIST_HORIZONTAL_PADDING),
-                    contentPadding = PaddingValues(vertical = LOGS_LIST_VERTICAL_PADDING),
-                    verticalArrangement = Arrangement.spacedBy(LOGS_LIST_ITEM_SPACING)
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = PaddingValues(
+                        start = PAGE_HORIZONTAL_PADDING,
+                        top = PAGE_CONTENT_TOP_PADDING,
+                        end = PAGE_HORIZONTAL_PADDING,
+                        bottom = PAGE_CONTENT_TOP_PADDING + bottomInnerPadding,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(PAGE_ITEM_GAP)
                 ) {
                     itemsIndexed(filteredLines) { index, line ->
                         LogLineCard(

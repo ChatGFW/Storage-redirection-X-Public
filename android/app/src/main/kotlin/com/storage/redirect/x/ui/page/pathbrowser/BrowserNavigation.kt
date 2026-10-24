@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.R
+import com.storage.redirect.x.ui.component.SrxBackButton
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.icon.AppIcons
 import top.yukonga.miuix.kmp.basic.Icon
@@ -41,9 +42,7 @@ internal fun BrowserScaffold(
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val back: @Composable () -> Unit = {
-        IconButton(onClick = onBack, modifier = Modifier.testTag("browser_back")) {
-            Icon(AppIcons.Back, stringResource(R.string.browser_back), tint = browserColors().text)
-        }
+        SrxBackButton(onClick = onBack, modifier = Modifier.testTag("browser_back"))
     }
     val settings: @Composable () -> Unit = {
         IconButton(onClick = onSettings, modifier = Modifier.testTag("browser_settings")) {
