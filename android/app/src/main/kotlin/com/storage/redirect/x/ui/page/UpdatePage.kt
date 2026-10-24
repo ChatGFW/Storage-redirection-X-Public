@@ -37,6 +37,7 @@ import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.SrxBackButton
+import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Card
@@ -74,20 +75,23 @@ fun UpdatePage(
     val showErrorDialog = remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<UpdateResult?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize().testTag("page_update")) {
-        SrxTopAppBar(
-            title = stringResource(R.string.settings_update),
-            scrollBehavior = scrollBehavior,
-            navigationIcon = { SrxBackButton(onClick = onBack) },
-        )
-
+    SrxScaffold(
+        modifier = Modifier.testTag("page_update"),
+        topBar = {
+            SrxTopAppBar(
+                title = stringResource(R.string.settings_update),
+                scrollBehavior = scrollBehavior,
+                navigationIcon = { SrxBackButton(onClick = onBack) },
+            )
+        },
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
+            Spacer(Modifier.height(innerPadding.calculateTopPadding() + PAGE_CONTENT_TOP_PADDING))
 
             Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
                 SwitchPreference(

@@ -1,7 +1,6 @@
 package com.storage.redirect.x.ui.page.pathbrowser
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -40,6 +39,7 @@ import com.storage.redirect.x.R
 import com.storage.redirect.x.ui.component.SrxBackButton
 import com.storage.redirect.x.ui.component.TOP_BAR_POPUP_POSITION_PROVIDER
 import com.storage.redirect.x.ui.icon.AppIcons
+import com.storage.redirect.x.ui.util.topBarSurface
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
@@ -62,7 +62,7 @@ internal fun BrowserTopBar(state: PathBrowserState, onBack: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .background(MiuixTheme.colorScheme.surface)
+            .topBarSurface()
             .windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top))
             .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
             .height(BROWSER_TOP_BAR_HEIGHT),

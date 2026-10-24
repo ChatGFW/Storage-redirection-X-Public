@@ -47,22 +47,23 @@ private val DIRECTORY_GROUP_CORNER_RADIUS = 16.dp
 private val DIRECTORY_ROW_MIN_HEIGHT = 60.dp
 private val DIRECTORY_ICON_SIZE = 34.dp
 
+// 列表从顶栏下方滑过；加载与空状态留在顶栏之下
 @Composable
-internal fun BrowserDirectoryList(state: PathBrowserState, bottomPadding: Dp) {
+internal fun BrowserDirectoryList(state: PathBrowserState, topPadding: Dp, bottomPadding: Dp) {
     val entries = state.visibleDirectories
     val listState = rememberLazyListState()
     LaunchedEffect(state.currentPath, state.query, state.showHidden, state.isDescending) {
         listState.scrollToItem(0)
     }
     when {
-        state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        state.isLoading -> Box(Modifier.fillMaxSize().padding(top = topPadding), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
-        state.hasLoadError || entries.isEmpty() -> BrowserEmptyState(state)
+        state.hasLoadError || entries.isEmpty() -> Box(Modifier.padding(top = topPadding)) { BrowserEmptyState(state) }
         else -> LazyColumn(
             modifier = Modifier.fillMaxSize().testTag("browser_directories"),
             state = listState,
-            contentPadding = PaddingValues(bottom = bottomPadding),
+            contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
         ) {
             item(key = "title") {
                 SmallTitle(

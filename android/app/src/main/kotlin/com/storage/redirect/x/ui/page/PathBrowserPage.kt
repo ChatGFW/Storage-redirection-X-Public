@@ -19,13 +19,13 @@ import androidx.compose.ui.unit.dp
 import com.storage.redirect.x.BuildConfig
 import com.storage.redirect.x.data.repository.PathBrowserRepository
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
+import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.page.pathbrowser.BrowserDirectoryList
 import com.storage.redirect.x.ui.page.pathbrowser.BrowserFloatingBar
 import com.storage.redirect.x.ui.page.pathbrowser.BrowserPathPanel
 import com.storage.redirect.x.ui.page.pathbrowser.BrowserTopBar
 import com.storage.redirect.x.ui.page.pathbrowser.PathBrowserDialogs
 import com.storage.redirect.x.ui.page.pathbrowser.PathBrowserState
-import top.yukonga.miuix.kmp.basic.Scaffold
 
 @Composable
 fun PathBrowserPage(
@@ -56,7 +56,7 @@ fun PathBrowserPage(
     BackHandler(enabled = state.isPathPanelExpanded) { state.isPathPanelExpanded = false }
 
     var floatingBarSpace by remember { mutableStateOf(0.dp) }
-    Scaffold(
+    SrxScaffold(
         modifier = Modifier
             .fillMaxSize()
             .imePadding()
@@ -64,16 +64,22 @@ fun PathBrowserPage(
             .testTag("page_path_browser"),
         topBar = { BrowserTopBar(state, onBack = navigateUp) },
     ) { padding ->
-        // 列表延伸到屏幕底部，底部留白由悬浮栏高度决定
-        Box(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
-            BrowserDirectoryList(state, bottomPadding = floatingBarSpace + PAGE_ITEM_GAP)
+        // 列表从顶栏下方滑过并延伸到屏幕底部，底部留白由悬浮栏高度决定
+        Box(Modifier.fillMaxSize()) {
+            BrowserDirectoryList(
+                state,
+                topPadding = padding.calculateTopPadding(),
+                bottomPadding = floatingBarSpace + PAGE_ITEM_GAP,
+            )
             BrowserFloatingBar(state, onSpaceChange = { floatingBarSpace = it }) {
                 val paths = state.confirmedPaths()
                 if (paths.isNotEmpty()) {
                     if (multiSelect) onPathsSelect(paths) else onPathSelect(paths.first())
                 }
             }
-            BrowserPathPanel(state)
+            Box(Modifier.padding(top = padding.calculateTopPadding())) {
+                BrowserPathPanel(state)
+            }
         }
     }
     PathBrowserDialogs(state)

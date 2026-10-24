@@ -53,9 +53,11 @@ import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.STATUS_SUCCESS_COLOR
+import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.component.StatusTag
 import com.storage.redirect.x.ui.icon.AppIcons
+import com.storage.redirect.x.ui.util.topBarSurface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
@@ -152,33 +154,54 @@ fun FileMonitorPage(
     }
 
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag("page_monitor"),
-    ) {
-        SrxTopAppBar(
-            title = stringResource(R.string.file_monitor_title),
-            actions = {
-                IconButton(onClick = { monitorViewModel.refresh() }) {
-                    Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.file_monitor_refresh))
+    // 有记录时搜索栏随顶栏固定，列表从两者下方滑过
+    val isSearchVisible = !isLoading && entries.isNotEmpty()
+    SrxScaffold(
+        modifier = Modifier.testTag("page_monitor"),
+        topBar = {
+            Column {
+                SrxTopAppBar(
+                    title = stringResource(R.string.file_monitor_title),
+                    actions = {
+                        IconButton(onClick = { monitorViewModel.refresh() }) {
+                            Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.file_monitor_refresh))
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+                if (isSearchVisible) {
+                    Column(Modifier.topBarSurface()) {
+                        Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
+                        SearchBar(
+                            inputField = {
+                                InputField(
+                                    query = searchQuery,
+                                    onQueryChange = { monitorViewModel.updateSearchQuery(it) },
+                                    onSearch = {},
+                                    expanded = false,
+                                    onExpandedChange = {},
+                                    label = stringResource(R.string.file_monitor_search_hint)
+                                )
+                            },
+                            onExpandedChange = {},
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {}
+                    }
                 }
-            },
-            scrollBehavior = scrollBehavior,
-        )
-
-        Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
-
+            }
+        },
+    ) { innerPadding ->
+        val topPadding = innerPadding.calculateTopPadding()
         if (isLoading) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().padding(top = topPadding),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
             }
-        } else if (entries.isEmpty()) {
+        } else if (filteredEntries.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().padding(top = topPadding),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -187,52 +210,25 @@ fun FileMonitorPage(
                 )
             }
         } else {
-            SearchBar(
-                inputField = {
-                    InputField(
-                        query = searchQuery,
-                        onQueryChange = { monitorViewModel.updateSearchQuery(it) },
-                        onSearch = {},
-                        expanded = false,
-                        onExpandedChange = {},
-                        label = stringResource(R.string.file_monitor_search_hint)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    start = PAGE_HORIZONTAL_PADDING,
+                    top = topPadding + PAGE_CONTENT_TOP_PADDING,
+                    end = PAGE_HORIZONTAL_PADDING,
+                    bottom = PAGE_CONTENT_TOP_PADDING + bottomInnerPadding,
+                ),
+                verticalArrangement = Arrangement.spacedBy(PAGE_ITEM_GAP)
+            ) {
+                items(filteredEntries) { entry ->
+                    val subjectPackage = entry.subjectPackage
+                    MonitorEntryCard(
+                        entry = entry,
+                        appName = appNames[subjectPackage] ?: subjectPackage,
+                        appIcon = appIcons[subjectPackage]
                     )
-                },
-                onExpandedChange = {},
-                modifier = Modifier.fillMaxWidth(),
-            ) {}
-
-            if (filteredEntries.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.file_monitor_empty),
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                    contentPadding = PaddingValues(
-                        start = PAGE_HORIZONTAL_PADDING,
-                        top = PAGE_CONTENT_TOP_PADDING,
-                        end = PAGE_HORIZONTAL_PADDING,
-                        bottom = PAGE_CONTENT_TOP_PADDING + bottomInnerPadding,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(PAGE_ITEM_GAP)
-                ) {
-                    items(filteredEntries) { entry ->
-                        val subjectPackage = entry.subjectPackage
-                        MonitorEntryCard(
-                            entry = entry,
-                            appName = appNames[subjectPackage] ?: subjectPackage,
-                            appIcon = appIcons[subjectPackage]
-                        )
-                    }
                 }
             }
         }

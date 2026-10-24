@@ -34,6 +34,7 @@ import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PreferenceIcon
+import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.icon.AppIcons
 import top.yukonga.miuix.kmp.basic.Card
@@ -160,23 +161,22 @@ private fun SettingsPageMiuix(
         settingsViewModel.restorePackageConfigsFromUri(context.contentResolver, uri)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag("page_settings"),
-    ) {
-        SrxTopAppBar(
-            title = stringResource(R.string.settings_title),
-            scrollBehavior = scrollBehavior
-        )
-
+    SrxScaffold(
+        modifier = Modifier.testTag("page_settings"),
+        topBar = {
+            SrxTopAppBar(
+                title = stringResource(R.string.settings_title),
+                scrollBehavior = scrollBehavior
+            )
+        },
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
+            Spacer(Modifier.height(innerPadding.calculateTopPadding() + PAGE_CONTENT_TOP_PADDING))
 
             // 外观设置
             SmallTitle(text = stringResource(R.string.settings_appearance))

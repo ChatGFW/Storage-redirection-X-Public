@@ -14,8 +14,6 @@
     <string name="settings_key_color_default">System</string>
     <string name="settings_color_style">Color style</string>
     <string name="settings_color_spec">Color spec</string>
-    <string name="settings_enable_blur">Background blur</string>
-    <string name="settings_enable_blur_summary">Enable window background blur effect.</string>
     <string name="settings_page_scale">Page scale</string>
     <string name="settings_page_scale_summary">Adjust the overall UI scale.</string>
     <string name="color_red">Red</string>
@@ -192,10 +190,12 @@
     <string name="settings_appearance">Appearance</string>
     <string name="settings_floating_bottom_bar">Floating bottom bar</string>
     <string name="settings_floating_bottom_bar_summary">Use a floating bottom bar that overlays page content.</string>
-    <string name="settings_floating_bottom_bar_blur">Bottom bar blur</string>
-    <string name="settings_floating_bottom_bar_blur_summary">Enable blur effect only for the floating bottom bar.</string>
+    <string name="settings_top_bar_blur">Top bar blur</string>
+    <string name="settings_top_bar_blur_summary">Apply blur and translucency to the top bar.</string>
+    <string name="settings_bottom_bar_blur">Bottom bar blur</string>
+    <string name="settings_bottom_bar_blur_summary">Apply blur and translucency to the bottom navigation bar.</string>
     <string name="settings_predictive_back">Predictive back gesture</string>
-    <string name="settings_predictive_back_summary">Enable predictive back gesture support</string>
+    <string name="settings_predictive_back_summary">Enable predictive back gesture support.</string>
     <string name="settings_fuse_fixer">FuseFixer</string>
     <string name="settings_fuse_fixer_summary">Normalize hidden Unicode marks in MediaProvider FUSE path checks.</string>
     <string name="settings_tools">Tools</string>

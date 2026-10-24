@@ -12,24 +12,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.storage.redirect.x.ui.util.surfaceBlur
 import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.blur.BlendColorEntry
-import top.yukonga.miuix.kmp.blur.BlurDefaults
-import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.NavigationBar as MiuixNavigationBar
 import top.yukonga.miuix.kmp.basic.Text as MiuixText
 
-private val NAV_BAR_CONTENT_HEIGHT = 72.dp
+// 不含系统导航栏；页面按此为叠在内容上的固定底栏留白
+internal val NAV_BAR_CONTENT_HEIGHT = 72.dp
 
 // 固定底栏：miuix NavigationBar + 自绘条目
 // 模糊开启时经 textureBlur 采样内容，菜单展开时由 enabled 拦截点击
@@ -43,9 +40,8 @@ fun AppNavigationBar(
     backdrop: Backdrop?,
     onSelect: (Int) -> Unit,
 ) {
-    val isBlurEnabled = backdrop != null
     MiuixNavigationBar(
-        color = if (isBlurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
+        color = if (backdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface,
         modifier = Modifier.surfaceBlur(backdrop),
     ) {
         icons.forEachIndexed { index, icon ->
@@ -105,23 +101,4 @@ private fun RowScope.MiuixBottomBarItem(
             overflow = TextOverflow.Ellipsis,
         )
     }
-}
-
-// 毛玻璃表面：模糊 backdrop 后叠加 surface 蒙层，参数与顶栏保持一致
-@Composable
-fun Modifier.surfaceBlur(
-    backdrop: Backdrop?,
-    shape: Shape = RectangleShape,
-): Modifier {
-    if (backdrop == null) return this
-    return textureBlur(
-        backdrop = backdrop,
-        shape = shape,
-        blurRadius = 25f,
-        colors = BlurDefaults.blurColors(
-            blendColors = listOf(
-                BlendColorEntry(color = MiuixTheme.colorScheme.surface.copy(alpha = 0.8f)),
-            ),
-        ),
-    )
 }

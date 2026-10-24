@@ -40,6 +40,7 @@ import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.STATUS_SUCCESS_COLOR
+import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.icon.AppIcons
 import kotlinx.coroutines.launch
@@ -47,7 +48,6 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
@@ -108,7 +108,7 @@ fun PermissionPage(onAllGranted: () -> Unit) {
     }
 
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-    Scaffold(
+    SrxScaffold(
         topBar = {
             SrxTopAppBar(
                 title = stringResource(R.string.permission_title),
@@ -120,9 +120,9 @@ fun PermissionPage(onAllGranted: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
+                .padding(padding)
                 .padding(horizontal = PAGE_HORIZONTAL_PADDING, vertical = PAGE_CONTENT_TOP_PADDING),
             verticalArrangement = Arrangement.spacedBy(PAGE_ITEM_GAP),
         ) {

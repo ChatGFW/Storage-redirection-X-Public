@@ -21,6 +21,7 @@ import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.SrxBackButton
+import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -127,20 +128,22 @@ fun OpenSourceLicensesPage(onBack: () -> Unit, bottomInnerPadding: Dp = 0.dp) {
         context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        SrxTopAppBar(
-            title = stringResource(R.string.settings_open_source_licenses),
-            scrollBehavior = scrollBehavior,
-            navigationIcon = { SrxBackButton(onClick = onBack) },
-        )
-
+    SrxScaffold(
+        topBar = {
+            SrxTopAppBar(
+                title = stringResource(R.string.settings_open_source_licenses),
+                scrollBehavior = scrollBehavior,
+                navigationIcon = { SrxBackButton(onClick = onBack) },
+            )
+        },
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
+            Spacer(Modifier.height(innerPadding.calculateTopPadding() + PAGE_CONTENT_TOP_PADDING))
 
             SmallTitle(text = stringResource(R.string.settings_android_libraries))
 

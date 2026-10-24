@@ -53,11 +53,13 @@ import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.PillButton
 import com.storage.redirect.x.ui.component.STATUS_WARNING_COLOR
+import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.component.SrxSmallTopAppBar
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.component.StatusTag
 import com.storage.redirect.x.ui.component.TOP_BAR_POPUP_POSITION_PROVIDER
 import com.storage.redirect.x.ui.icon.AppIcons
+import com.storage.redirect.x.ui.util.topBarSurface
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -107,38 +109,45 @@ internal fun AppsPageMiuix(
         data.bottomInnerPadding
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag("page_apps"),
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            if (data.isBatchMode) {
-                BatchTopBarMiuix(data = data, actions = actions)
-            } else {
-                NormalTopBarMiuix(data = data, dialogs = dialogs, actions = actions, scrollBehavior = scrollBehavior)
-            }
-
-            Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
-
-            SearchBar(
-                inputField = {
-                    InputField(
-                        query = data.searchQuery,
-                        onQueryChange = actions.onSearchChange,
-                        onSearch = {},
-                        expanded = false,
+    // 搜索栏随顶栏固定，列表从两者下方滑过
+    SrxScaffold(
+        modifier = Modifier.testTag("page_apps"),
+        topBar = {
+            Column {
+                if (data.isBatchMode) {
+                    BatchTopBarMiuix(data = data, actions = actions)
+                } else {
+                    NormalTopBarMiuix(data = data, dialogs = dialogs, actions = actions, scrollBehavior = scrollBehavior)
+                }
+                Column(Modifier.topBarSurface()) {
+                    Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
+                    SearchBar(
+                        inputField = {
+                            InputField(
+                                query = data.searchQuery,
+                                onQueryChange = actions.onSearchChange,
+                                onSearch = {},
+                                expanded = false,
+                                onExpandedChange = {},
+                                label = stringResource(R.string.apps_search),
+                            )
+                        },
                         onExpandedChange = {},
-                        label = stringResource(R.string.apps_search),
-                    )
-                },
-                onExpandedChange = {},
-                modifier = Modifier.fillMaxWidth(),
-            ) {}
-
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {}
+                }
+            }
+        },
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            val topPadding = innerPadding.calculateTopPadding()
             if (data.isLoading) {
-                SmallTitle(text = stringResource(R.string.apps_title))
-                LazyColumn(modifier = Modifier.fillMaxSize(), userScrollEnabled = false) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = topPadding),
+                    userScrollEnabled = false,
+                ) {
+                    item { SmallTitle(text = stringResource(R.string.apps_title)) }
                     items(8) {
                         SkeletonListItem()
                     }
@@ -148,26 +157,27 @@ internal fun AppsPageMiuix(
                     data = data,
                     actions = actions,
                     scrollBehavior = scrollBehavior,
+                    topPadding = topPadding,
                     bottomPadding = listBottomPadding,
                 )
             }
-        }
 
-        BottomFloatingBar(
-            isVisible = data.isBatchMode,
-            onSpaceChange = { batchBarSpace = it },
-        ) {
-            PillButton(
-                text = stringResource(R.string.apps_restore_rules),
-                onClick = actions.onShowRestoreRules,
-                modifier = Modifier.testTag("apps_multi_select_restore"),
-            )
-            PillButton(
-                text = stringResource(R.string.apps_batch_apply_template),
-                onClick = actions.onShowTemplatePicker,
-                modifier = Modifier.testTag("apps_multi_select_apply_template"),
-                colors = ButtonDefaults.textButtonColorsPrimary(),
-            )
+            BottomFloatingBar(
+                isVisible = data.isBatchMode,
+                onSpaceChange = { batchBarSpace = it },
+            ) {
+                PillButton(
+                    text = stringResource(R.string.apps_restore_rules),
+                    onClick = actions.onShowRestoreRules,
+                    modifier = Modifier.testTag("apps_multi_select_restore"),
+                )
+                PillButton(
+                    text = stringResource(R.string.apps_batch_apply_template),
+                    onClick = actions.onShowTemplatePicker,
+                    modifier = Modifier.testTag("apps_multi_select_apply_template"),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
         }
     }
 
@@ -181,6 +191,7 @@ private fun AppList(
     data: AppsPageData,
     actions: AppsPageActions,
     scrollBehavior: ScrollBehavior,
+    topPadding: Dp,
     bottomPadding: Dp,
 ) {
     val redirectedSet = remember(data.redirectedPackages) { data.redirectedPackages.toHashSet() }
@@ -189,6 +200,8 @@ private fun AppList(
         isRefreshing = data.isRefreshing,
         onRefresh = actions.onRefresh,
         modifier = Modifier.fillMaxSize(),
+        // 刷新指示器从顶栏下方出现
+        contentPadding = PaddingValues(top = topPadding),
         topAppBarScrollBehavior = scrollBehavior,
         refreshTexts = listOf(
             stringResource(R.string.common_pull_to_refresh),
@@ -200,7 +213,7 @@ private fun AppList(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = data.listState,
-            contentPadding = PaddingValues(bottom = bottomPadding),
+            contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
         ) {
             if (data.filteredApps.isEmpty()) {
                 item(key = "empty") {

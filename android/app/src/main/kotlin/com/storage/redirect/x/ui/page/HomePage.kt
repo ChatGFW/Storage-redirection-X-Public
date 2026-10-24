@@ -38,6 +38,7 @@ import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PreferenceIcon
+import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.component.StatusCard
 import com.storage.redirect.x.ui.icon.AppIcons
@@ -97,23 +98,22 @@ fun HomePage(
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
     val isModuleInstalled = HomeDataCache.moduleStatus == ModuleStatus.INSTALLED
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag("page_home"),
-    ) {
-        SrxTopAppBar(
-            title = stringResource(R.string.home_title),
-            scrollBehavior = scrollBehavior,
-        )
-
+    SrxScaffold(
+        modifier = Modifier.testTag("page_home"),
+        topBar = {
+            SrxTopAppBar(
+                title = stringResource(R.string.home_title),
+                scrollBehavior = scrollBehavior,
+            )
+        },
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
+            Spacer(Modifier.height(innerPadding.calculateTopPadding() + PAGE_CONTENT_TOP_PADDING))
 
             StatusCard(
                 status = HomeDataCache.moduleStatus,

@@ -14,8 +14,6 @@
     <string name="settings_key_color_default">系统</string>
     <string name="settings_color_style">配色风格</string>
     <string name="settings_color_spec">配色规范</string>
-    <string name="settings_enable_blur">背景模糊</string>
-    <string name="settings_enable_blur_summary">启用窗口背景模糊效果。</string>
     <string name="settings_page_scale">页面缩放</string>
     <string name="settings_page_scale_summary">调整整体界面缩放比例。</string>
     <string name="color_red">红色</string>
@@ -191,10 +189,12 @@
     <string name="settings_appearance">外观</string>
     <string name="settings_floating_bottom_bar">悬浮底栏</string>
     <string name="settings_floating_bottom_bar_summary">启用悬浮在页面内容之上的底栏。</string>
-    <string name="settings_floating_bottom_bar_blur">底栏模糊</string>
-    <string name="settings_floating_bottom_bar_blur_summary">仅为悬浮底栏启用模糊效果。</string>
+    <string name="settings_top_bar_blur">顶栏模糊</string>
+    <string name="settings_top_bar_blur_summary">为顶部标题栏启用背景模糊和半透明效果。</string>
+    <string name="settings_bottom_bar_blur">底栏模糊</string>
+    <string name="settings_bottom_bar_blur_summary">为底部导航栏启用背景模糊和半透明效果。</string>
     <string name="settings_predictive_back">预测性返回手势</string>
-    <string name="settings_predictive_back_summary">启用对预测性返回手势的支持</string>
+    <string name="settings_predictive_back_summary">启用对预测性返回手势的支持。</string>
     <string name="settings_fuse_fixer">FuseFixer</string>
     <string name="settings_fuse_fixer_summary">在 MediaProvider FUSE 路径校验中清理隐藏 Unicode 标记。</string>
     <string name="settings_tools">工具</string>

@@ -47,7 +47,7 @@ data class AppThemeSettings(
     val colorSpec: ColorSpec.SpecVersion = ColorSpec.SpecVersion.Default,
     val smoothRounding: Boolean = true,
     val pageScale: Float = 1.0f,
-    val enableBlur: Boolean = false,
+    val isTopBarBlurEnabled: Boolean = true,
 )
 
 val keyColorOptions = listOf(
@@ -88,7 +88,7 @@ object AppThemeController {
             ),
             smoothRounding = AppPreferences.getBoolean(PreferenceKeys.SMOOTH_ROUNDING, true),
             pageScale = AppPreferences.getFloat(PreferenceKeys.PAGE_SCALE, 1.0f),
-            enableBlur = AppPreferences.getBoolean(PreferenceKeys.ENABLE_BLUR, false),
+            isTopBarBlurEnabled = AppPreferences.getBoolean(PreferenceKeys.TOP_BAR_BLUR_ENABLED, true),
         )
     }
 
@@ -100,7 +100,7 @@ object AppThemeController {
         AppPreferences.put(PreferenceKeys.COLOR_SPEC, settings.colorSpec.name)
         AppPreferences.put(PreferenceKeys.SMOOTH_ROUNDING, settings.smoothRounding)
         AppPreferences.put(PreferenceKeys.PAGE_SCALE, settings.pageScale)
-        AppPreferences.put(PreferenceKeys.ENABLE_BLUR, settings.enableBlur)
+        AppPreferences.put(PreferenceKeys.TOP_BAR_BLUR_ENABLED, settings.isTopBarBlurEnabled)
     }
 
     private inline fun <reified T : Enum<T>> enumValueOrDefault(value: String, default: T): T {
@@ -113,4 +113,3 @@ object AppThemeController {
 }
 
 val LocalColorMode = staticCompositionLocalOf { ColorMode.SYSTEM }
-val LocalEnableBlur = staticCompositionLocalOf { false }

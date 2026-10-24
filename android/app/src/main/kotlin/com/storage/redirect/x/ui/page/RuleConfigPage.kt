@@ -55,6 +55,7 @@ import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.STATUS_WARNING_COLOR
 import com.storage.redirect.x.ui.component.SrxBackButton
+import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.component.SrxTopAppBar
 import com.storage.redirect.x.ui.navigation.PageStackHost
 import com.storage.redirect.x.ui.navigation.rememberPageStack
@@ -70,7 +71,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
@@ -321,7 +321,7 @@ fun RuleConfigPage(
         },
     ) {
         val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-        Scaffold(
+        SrxScaffold(
             topBar = {
                 SrxTopAppBar(
                     title = decodedAppName,
@@ -371,19 +371,19 @@ fun RuleConfigPage(
                 ) {
                     CircularProgressIndicator()
                 }
-                return@Scaffold
+                return@SrxScaffold
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .nestedScroll(scrollBehavior.nestedScrollConnection)
-                        .padding(horizontal = PAGE_HORIZONTAL_PADDING)
+                        .padding(horizontal = PAGE_HORIZONTAL_PADDING),
+                    contentPadding = PaddingValues(
+                        top = padding.calculateTopPadding(),
+                        bottom = padding.calculateBottomPadding(),
+                    ),
                 ) {
                     // 重定向开关，带应用图标
                     item {

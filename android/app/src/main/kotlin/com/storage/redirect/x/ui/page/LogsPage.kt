@@ -49,7 +49,9 @@ import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.SrxBackButton
+import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.component.SrxTopAppBar
+import com.storage.redirect.x.ui.util.topBarSurface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -123,97 +125,94 @@ fun LogsPage(onBack: () -> Unit, bottomInnerPadding: Dp = 0.dp) {
         else logLines.filter { it.contains(filterQuery, ignoreCase = true) }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        SrxTopAppBar(
-            title = stringResource(R.string.logs_title),
-            navigationIcon = { SrxBackButton(onClick = onBack) },
-            actions = {
-                IconButton(
-                    onClick = {
-                        val fileName = "srx_logs_${System.currentTimeMillis()}.log"
-                        exportLauncher.launch(fileName)
+    // 有日志时过滤栏随顶栏固定，列表从两者下方滑过
+    val isFilterVisible = !isLoading && logLines.isNotEmpty()
+    SrxScaffold(
+        topBar = {
+            Column {
+                SrxTopAppBar(
+                    title = stringResource(R.string.logs_title),
+                    navigationIcon = { SrxBackButton(onClick = onBack) },
+                    actions = {
+                        IconButton(
+                            onClick = {
+                                val fileName = "srx_logs_${System.currentTimeMillis()}.log"
+                                exportLauncher.launch(fileName)
+                            },
+                        ) {
+                            Icon(AppIcons.Export, contentDescription = stringResource(R.string.logs_export))
+                        }
+                        IconButton(onClick = { loadLogs() }) {
+                            Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.logs_refresh))
+                        }
                     },
-                ) {
-                    Icon(AppIcons.Export, contentDescription = stringResource(R.string.logs_export))
+                    scrollBehavior = scrollBehavior,
+                )
+                if (isFilterVisible) {
+                    Column(Modifier.topBarSurface()) {
+                        Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
+                        // 关键字过滤搜索栏
+                        SearchBar(
+                            inputField = {
+                                InputField(
+                                    query = filterQuery,
+                                    onQueryChange = { filterQuery = it },
+                                    onSearch = {},
+                                    expanded = false,
+                                    onExpandedChange = {},
+                                    label = stringResource(R.string.logs_filter_keyword)
+                                )
+                            },
+                            onExpandedChange = {},
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {}
+                    }
                 }
-                IconButton(onClick = { loadLogs() }) {
-                    Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.logs_refresh))
-                }
-            },
-            scrollBehavior = scrollBehavior,
-        )
-
-        Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
-
+            }
+        },
+    ) { innerPadding ->
+        val topPadding = innerPadding.calculateTopPadding()
         if (isLoading) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().padding(top = topPadding),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
             }
-        } else if (logLines.isEmpty()) {
+        } else if (filteredLines.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().padding(top = topPadding),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = stringResource(R.string.logs_empty),
+                    text = stringResource(if (logLines.isEmpty()) R.string.logs_empty else R.string.logs_no_match),
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                 )
             }
         } else {
-            // 关键字过滤搜索栏
-            SearchBar(
-                inputField = {
-                    InputField(
-                        query = filterQuery,
-                        onQueryChange = { filterQuery = it },
-                        onSearch = {},
-                        expanded = false,
-                        onExpandedChange = {},
-                        label = stringResource(R.string.logs_filter_keyword)
+            // 日志列表
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    start = PAGE_HORIZONTAL_PADDING,
+                    top = topPadding + PAGE_CONTENT_TOP_PADDING,
+                    end = PAGE_HORIZONTAL_PADDING,
+                    bottom = PAGE_CONTENT_TOP_PADDING + bottomInnerPadding,
+                ),
+                verticalArrangement = Arrangement.spacedBy(PAGE_ITEM_GAP)
+            ) {
+                itemsIndexed(filteredLines) { index, line ->
+                    LogLineCard(
+                        lineNumber = index + 1,
+                        content = line,
+                        onCopy = {
+                            val cm = context.getSystemService(ClipboardManager::class.java)
+                            cm.setPrimaryClip(ClipData.newPlainText("log_line", line))
+                            Toast.makeText(context, R.string.logs_copied_line, Toast.LENGTH_SHORT).show()
+                        }
                     )
-                },
-                onExpandedChange = {},
-                modifier = Modifier.fillMaxWidth(),
-            ) {}
-
-            if (filteredLines.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.logs_no_match),
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                    )
-                }
-            } else {
-                // 日志列表
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                    contentPadding = PaddingValues(
-                        start = PAGE_HORIZONTAL_PADDING,
-                        top = PAGE_CONTENT_TOP_PADDING,
-                        end = PAGE_HORIZONTAL_PADDING,
-                        bottom = PAGE_CONTENT_TOP_PADDING + bottomInnerPadding,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(PAGE_ITEM_GAP)
-                ) {
-                    itemsIndexed(filteredLines) { index, line ->
-                        LogLineCard(
-                            lineNumber = index + 1,
-                            content = line,
-                            onCopy = {
-                                val cm = context.getSystemService(ClipboardManager::class.java)
-                                cm.setPrimaryClip(ClipData.newPlainText("log_line", line))
-                                Toast.makeText(context, R.string.logs_copied_line, Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                    }
                 }
             }
         }

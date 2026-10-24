@@ -55,6 +55,7 @@ import com.storage.redirect.x.ui.component.bottombar.AppNavigationBar
 import com.storage.redirect.x.ui.component.bottombar.BottomBarAppearanceState
 import com.storage.redirect.x.ui.component.bottombar.FloatingBottomBar
 import com.storage.redirect.x.ui.component.bottombar.FloatingBottomBarTab
+import com.storage.redirect.x.ui.component.bottombar.NAV_BAR_CONTENT_HEIGHT
 import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.ui.navigation.AppPage
 import com.storage.redirect.x.ui.navigation.PageStackHost
@@ -75,13 +76,12 @@ import com.storage.redirect.x.ui.page.UpdatePage
 import com.storage.redirect.x.ui.theme.AppTheme
 import com.storage.redirect.x.ui.theme.AppThemeController
 import com.storage.redirect.x.ui.theme.AppThemeSettings
-import com.storage.redirect.x.ui.theme.LocalEnableBlur
 import com.storage.redirect.x.ui.theme.isInDarkTheme
-import com.storage.redirect.x.ui.util.LocalTopBarBackdrop
-import com.storage.redirect.x.ui.util.rememberTopBarBackdrop
+import com.storage.redirect.x.ui.util.LocalTopBarBlur
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -109,7 +109,7 @@ fun App(
 
     CompositionLocalProvider(
         LocalDensity provides density,
-        LocalEnableBlur provides themeSettings.enableBlur,
+        LocalTopBarBlur provides themeSettings.isTopBarBlurEnabled,
     ) {
     AppTheme(settings = themeSettings) {
         // 根据主题动态切换状态栏和导航栏图标颜色
@@ -168,7 +168,7 @@ fun App(
         fun updateBottomBarAppearance(state: BottomBarAppearanceState) {
             bottomBarAppearance = state
             AppPreferences.put(PreferenceKeys.FLOATING_BOTTOM_BAR_ENABLED, state.isFloatingBottomBarEnabled)
-            AppPreferences.put(PreferenceKeys.FLOATING_BOTTOM_BAR_BLUR_ENABLED, state.isFloatingBottomBarBlurEnabled)
+            AppPreferences.put(PreferenceKeys.BOTTOM_BAR_BLUR_ENABLED, state.isBottomBarBlurEnabled)
         }
 
         // 底栏导航项
@@ -201,8 +201,7 @@ fun App(
         val pagerState = rootNavigation.pagerState
         val selectedTabIndex = rootNavigation.selectedPage
 
-        // 底栏/顶栏共用外观开关
-        val isBlurEnabled = themeSettings.enableBlur && bottomBarAppearance.isFloatingBottomBarBlurEnabled
+        val isBottomBarBlurEnabled = bottomBarAppearance.isBottomBarBlurEnabled && isRuntimeShaderSupported()
         LaunchedEffect(pagerState.settledPage) {
             rootNavigation.syncPage()
         }
@@ -220,22 +219,19 @@ fun App(
 
         val bottomBarSurfaceColor = MiuixTheme.colorScheme.surface
         val bottomBarContentColor = MiuixTheme.colorScheme.onSurface
-        // 底栏与顶栏各自采样内容，共享同一个内容 backdrop
+        // 底栏采样整个分页内容；悬浮底栏未开模糊时也需要一个 backdrop 承载自身效果
         val bottomBarBackdrop = rememberLayerBackdrop {
             drawRect(bottomBarSurfaceColor)
             drawContent()
         }
-        val topBarBackdrop = rememberTopBarBackdrop(themeSettings.enableBlur)
-        val floatingBottomBarModifier = Modifier
-            .padding(bottom = 12.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
-        val overlayBottomPadding = if (bottomBarAppearance.isFloatingBottomBarEnabled) {
-            FLOATING_BOTTOM_BAR_OVERLAY_PADDING +
-                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        } else {
-            0.dp
-        }
-        // 二级页面覆盖底栏，底部只需避让系统导航栏
         val navigationBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val floatingBottomBarModifier = Modifier.padding(bottom = 12.dp + navigationBarsBottom)
+        // 底栏叠在分页内容上，主页面底部为其留白；二级页面覆盖底栏，只需避让系统导航栏
+        val overlayBottomPadding = navigationBarsBottom + if (bottomBarAppearance.isFloatingBottomBarEnabled) {
+            FLOATING_BOTTOM_BAR_OVERLAY_PADDING
+        } else {
+            NAV_BAR_CONTENT_HEIGHT
+        }
 
         PageStackHost(
             stack = pageStack,
@@ -273,19 +269,6 @@ fun App(
             },
         ) {
             Scaffold(
-                bottomBar = {
-                    if (bottomBarAppearance.usesBottomBarSlotPadding && !isAppsBatchMode) {
-                        AppNavigationBar(
-                            labels = navLabels,
-                            icons = navIcons,
-                            selectedIcons = navSelectedIcons,
-                            selectedIndex = selectedTabIndex,
-                            enabled = !isAnyMenuOpen,
-                            backdrop = if (isBlurEnabled) bottomBarBackdrop else null,
-                            onSelect = { index -> rootNavigation.animateTo(index) },
-                        )
-                    }
-                },
                 // 主内容仅消费横向安全区，顶部间距由页面顶栏自身处理
                 contentWindowInsets = WindowInsets.systemBars
                     .add(WindowInsets.displayCutout)
@@ -296,51 +279,41 @@ fun App(
                         modifier = Modifier
                             .padding(padding)
                             .testTag("page_container_${navKeys[pagerState.settledPage]}")
-                            .then(
-                                if (isBlurEnabled || topBarBackdrop != null) {
-                                    Modifier.layerBackdrop(bottomBarBackdrop)
-                                } else {
-                                    Modifier
-                                }
-                            ),
+                            .then(if (isBottomBarBlurEnabled) Modifier.layerBackdrop(bottomBarBackdrop) else Modifier),
                         verticalAlignment = Alignment.Top,
                         beyondViewportPageCount = navKeys.size - 1,
                         userScrollEnabled = !isAppsBatchMode,
                     ) { page ->
-                        CompositionLocalProvider(
-                            LocalTopBarBackdrop provides topBarBackdrop,
-                        ) {
-                            when (page) {
-                                0 -> HomePage(
-                                    themeMode = themeSettings.colorMode.value,
-                                    bottomInnerPadding = overlayBottomPadding,
-                                    onTemplatesClick = { pageStack.push(AppPage.Templates) },
-                                    onLogsClick = { pageStack.push(AppPage.Logs) },
-                                )
-                                1 -> AppsPage(
-                                    onAppClick = { packageName, appName, userId ->
-                                        pageStack.push(AppPage.RuleConfig(packageName, appName, userId))
-                                    },
-                                    configVersion = configVersion,
-                                    bottomInnerPadding = overlayBottomPadding,
-                                    onMenuStateChange = { isAnyMenuOpen = it },
-                                    onBatchModeChange = { isAppsBatchMode = it },
-                                    onTemplatesClick = { pageStack.push(AppPage.Templates) },
-                                )
-                                2 -> FileMonitorPage(bottomInnerPadding = overlayBottomPadding)
-                                3 -> SettingsPage(
-                                    onOpenTheme = { pageStack.push(AppPage.Theme) },
-                                    onOpenLogs = { pageStack.push(AppPage.Logs) },
-                                    onOpenAbout = { pageStack.push(AppPage.About) },
-                                    onOpenUpdate = { pageStack.push(AppPage.Update) },
-                                    bottomInnerPadding = overlayBottomPadding,
-                                )
-                            }
+                        when (page) {
+                            0 -> HomePage(
+                                themeMode = themeSettings.colorMode.value,
+                                bottomInnerPadding = overlayBottomPadding,
+                                onTemplatesClick = { pageStack.push(AppPage.Templates) },
+                                onLogsClick = { pageStack.push(AppPage.Logs) },
+                            )
+                            1 -> AppsPage(
+                                onAppClick = { packageName, appName, userId ->
+                                    pageStack.push(AppPage.RuleConfig(packageName, appName, userId))
+                                },
+                                configVersion = configVersion,
+                                bottomInnerPadding = overlayBottomPadding,
+                                onMenuStateChange = { isAnyMenuOpen = it },
+                                onBatchModeChange = { isAppsBatchMode = it },
+                                onTemplatesClick = { pageStack.push(AppPage.Templates) },
+                            )
+                            2 -> FileMonitorPage(bottomInnerPadding = overlayBottomPadding)
+                            3 -> SettingsPage(
+                                onOpenTheme = { pageStack.push(AppPage.Theme) },
+                                onOpenLogs = { pageStack.push(AppPage.Logs) },
+                                onOpenAbout = { pageStack.push(AppPage.About) },
+                                onOpenUpdate = { pageStack.push(AppPage.Update) },
+                                bottomInnerPadding = overlayBottomPadding,
+                            )
                         }
                     }
                 }
-            }
 
+            // 底栏属于主页面层，二级页面压栈后将其覆盖
             if (bottomBarAppearance.isFloatingBottomBarEnabled) {
                 Box(
                     modifier = Modifier
@@ -361,7 +334,7 @@ fun App(
                                 onSelected = { index -> rootNavigation.animateTo(index) },
                                 backdrop = bottomBarBackdrop,
                                 tabsCount = navKeys.size,
-                                isBlurEnabled = isBlurEnabled,
+                                isBlurEnabled = isBottomBarBlurEnabled,
                                 isDarkTheme = isDark,
                                 enabled = !isAnyMenuOpen,
                                 accentColor = MiuixTheme.colorScheme.primary,
@@ -395,7 +368,20 @@ fun App(
                         }
                     }
                 }
+            } else if (!isAppsBatchMode) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                    AppNavigationBar(
+                        labels = navLabels,
+                        icons = navIcons,
+                        selectedIcons = navSelectedIcons,
+                        selectedIndex = selectedTabIndex,
+                        enabled = !isAnyMenuOpen,
+                        backdrop = if (isBottomBarBlurEnabled) bottomBarBackdrop else null,
+                        onSelect = { index -> rootNavigation.animateTo(index) },
+                    )
+                }
             }
+        }
         }
     }
     }
