@@ -10,9 +10,6 @@ class SettingsUiStateTest {
     fun `default state keeps only settings page workflow flags`() {
         val state = SettingsUiState()
 
-        assertFalse(state.isLogsPageVisible)
-        assertFalse(state.isLicensesPageVisible)
-        assertFalse(state.isUpdatePageVisible)
         assertNull(state.hasRoot)
         assertFalse(state.isWorking)
         assertFalse(state.isFuseFixerEnabled)
