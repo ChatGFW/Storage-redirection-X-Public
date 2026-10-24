@@ -4,7 +4,6 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -131,7 +130,6 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
     // 模板选择、应用方式与共享 UID 确认状态
     var templates by remember { mutableStateOf<List<RedirectTemplate>>(emptyList()) }
     val showTemplatePicker = remember { mutableStateOf(false) }
-    var pickerSelectedId by remember { mutableStateOf<String?>(null) }
     val showApplyModeDialog = remember { mutableStateOf(false) }
     var selectedTemplate by remember { mutableStateOf<RedirectTemplate?>(null) }
     var pendingApplyMode by remember { mutableStateOf<TemplateApplyMode?>(null) }
@@ -185,7 +183,6 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
         showApplyModeDialog.value = false
         showSharedUidApplyDialog.value = false
         templates = emptyList()
-        pickerSelectedId = null
         selectedTemplate = null
         pendingApplyMode = null
     }
@@ -752,66 +749,16 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
         title = stringResource(R.string.apps_apply_template),
         onDismissRequest = { clearTemplateSelection() },
     ) {
-        Column(
-            modifier = Modifier
-                .semantics { testTagsAsResourceId = true }
-                .testTag("rule_config_template_picker"),
-        ) {
-            if (templates.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.apps_template_empty),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-                Spacer(Modifier.height(RULE_CONFIG_DIALOG_BOTTOM_SPACING))
-                TextButton(
-                    text = stringResource(R.string.common_cancel),
-                    onClick = { clearTemplateSelection() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("rule_config_template_picker_cancel"),
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp),
-                    verticalArrangement = Arrangement.spacedBy(RULE_CONFIG_DIALOG_FIELD_SPACING),
-                ) {
-                    items(templates, key = { it.id }) { template ->
-                        TemplatePickerOption(
-                            name = template.name,
-                            isPicked = pickerSelectedId == template.id,
-                            testTag = "rule_config_template_picker_item",
-                            onClick = { pickerSelectedId = template.id },
-                        )
-                    }
-                }
-                Spacer(Modifier.height(RULE_CONFIG_DIALOG_BOTTOM_SPACING))
-                Row {
-                    TextButton(
-                        text = stringResource(R.string.common_cancel),
-                        onClick = { clearTemplateSelection() },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("rule_config_template_picker_cancel"),
-                    )
-                    Spacer(Modifier.width(RULE_CONFIG_DIALOG_BUTTON_SPACING))
-                    TextButton(
-                        text = stringResource(R.string.common_ok),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                        enabled = pickerSelectedId != null,
-                        onClick = {
-                            val template = templates.firstOrNull { it.id == pickerSelectedId } ?: return@TextButton
-                            showTemplatePicker.value = false
-                            pickerSelectedId = null
-                            selectedTemplate = template
-                            showApplyModeDialog.value = true
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("rule_config_template_picker_confirm"),
-                    )
-                }
-            }
-        }
+        TemplatePickerContent(
+            templates = templates,
+            testTag = "rule_config_template_picker",
+            onPick = { template ->
+                showTemplatePicker.value = false
+                selectedTemplate = template
+                showApplyModeDialog.value = true
+            },
+            onCancel = { clearTemplateSelection() },
+        )
     }
 
     WindowDialog(

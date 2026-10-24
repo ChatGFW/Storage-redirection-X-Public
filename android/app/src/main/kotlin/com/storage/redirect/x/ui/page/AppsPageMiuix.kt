@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -469,64 +468,12 @@ private fun TemplatePickerDialog(
         title = stringResource(R.string.apps_apply_template),
         onDismissRequest = onDismissTemplatePicker,
     ) {
-        val pickerSelectedId = remember { mutableStateOf<String?>(null) }
-        LaunchedEffect(showTemplatePicker) {
-            if (showTemplatePicker) pickerSelectedId.value = null
-        }
-        Column(
-            modifier = Modifier
-                .semantics { testTagsAsResourceId = true }
-                .testTag("apps_template_picker"),
-        ) {
-            if (templates.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.apps_template_empty),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-                Spacer(Modifier.height(16.dp))
-                TextButton(
-                    text = stringResource(R.string.common_cancel),
-                    onClick = onDismissTemplatePicker,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("apps_template_picker_cancel"),
-                )
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    templates.forEach { template ->
-                        TemplatePickerOption(
-                            name = template.name,
-                            isPicked = pickerSelectedId.value == template.id,
-                            testTag = "apps_template_picker_item_${template.id}",
-                            onClick = { pickerSelectedId.value = template.id },
-                        )
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                Row {
-                    TextButton(
-                        text = stringResource(R.string.common_cancel),
-                        onClick = onDismissTemplatePicker,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("apps_template_picker_cancel"),
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    TextButton(
-                        text = stringResource(R.string.common_ok),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                        enabled = pickerSelectedId.value != null,
-                        onClick = {
-                            val target = templates.firstOrNull { it.id == pickerSelectedId.value } ?: return@TextButton
-                            onTemplateSelected(target)
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("apps_template_picker_confirm"),
-                    )
-                }
-            }
-        }
+        TemplatePickerContent(
+            templates = templates,
+            testTag = "apps_template_picker",
+            onPick = onTemplateSelected,
+            onCancel = onDismissTemplatePicker,
+        )
     }
 }
 
