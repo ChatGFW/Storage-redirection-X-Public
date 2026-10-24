@@ -9,7 +9,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -493,13 +492,15 @@ private fun TemplatePickerDialog(
                         .testTag("apps_template_picker_cancel"),
                 )
             } else {
-                templates.forEach { template ->
-                    TemplatePickerOption(
-                        name = template.name,
-                        isPicked = pickerSelectedId.value == template.id,
-                        testTag = "apps_template_picker_item_${template.id}",
-                        onClick = { pickerSelectedId.value = template.id },
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    templates.forEach { template ->
+                        TemplatePickerOption(
+                            name = template.name,
+                            isPicked = pickerSelectedId.value == template.id,
+                            testTag = "apps_template_picker_item_${template.id}",
+                            onClick = { pickerSelectedId.value = template.id },
+                        )
+                    }
                 }
                 Spacer(Modifier.height(16.dp))
                 Row {
@@ -562,41 +563,6 @@ private fun RestoreRulesDialog(dialogs: AppsPageDialogState, actions: AppsPageAc
             }
         }
     }
-}
-
-@Composable
-private fun TemplatePickerOption(
-    name: String,
-    isPicked: Boolean,
-    testTag: String,
-    onClick: () -> Unit,
-) {
-    val colorScheme = MiuixTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .then(if (isPicked) Modifier.background(colorScheme.primaryContainer) else Modifier)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp)
-            .testTag(testTag),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = if (isPicked) AppIcons.RadioOn else AppIcons.RadioOff,
-            contentDescription = null,
-            tint = if (isPicked) colorScheme.primary else colorScheme.onSurfaceVariantSummary,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = name,
-            style = MiuixTheme.textStyles.body1,
-            color = colorScheme.onSurface,
-            fontWeight = if (isPicked) FontWeight(600) else FontWeight(500),
-        )
-    }
-    Spacer(Modifier.height(4.dp))
 }
 
 @Composable

@@ -4,8 +4,7 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -33,13 +31,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.storage.redirect.x.R
@@ -560,27 +556,15 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
             showPathDialog.value = false
         }
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextField(
-                value = dialogPathInput,
-                onValueChange = {
-                    dialogPathInput = it
-                    pathDialogErrorResId = null
-                },
-                label = stringResource(R.string.rule_config_real_path),
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(Modifier.width(RULE_CONFIG_DIALOG_FIELD_SPACING))
-            TextButton(
-                text = stringResource(R.string.rule_config_browse),
-                onClick = {
-                    browseRoute = PathBrowseRoute(BrowseTarget.Path)
-                }
-            )
-        }
+        RulePathField(
+            value = dialogPathInput,
+            onValueChange = {
+                dialogPathInput = it
+                pathDialogErrorResId = null
+            },
+            label = stringResource(R.string.rule_config_real_path),
+            onBrowse = { browseRoute = PathBrowseRoute(BrowseTarget.Path) },
+        )
         pathDialogErrorResId?.let { errorResId ->
             Spacer(Modifier.height(RULE_CONFIG_DIALOG_FIELD_SPACING))
             Text(
@@ -650,54 +634,31 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
         title = stringResource(
             if (isEditingMapping) R.string.rule_config_edit_mapping else R.string.rule_config_add_mapping
         ),
+        summary = stringResource(R.string.rule_config_mapping_hint),
         onDismissRequest = {
             mappingDialogErrorResId = null
             showMappingDialog.value = false
         }
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextField(
-                value = dialogMappingRequestPathInput,
-                onValueChange = {
-                    dialogMappingRequestPathInput = it
-                    mappingDialogErrorResId = null
-                },
-                label = stringResource(R.string.rule_config_mapping_request_path),
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(Modifier.width(RULE_CONFIG_DIALOG_FIELD_SPACING))
-            TextButton(
-                text = stringResource(R.string.rule_config_browse),
-                onClick = {
-                    browseRoute = PathBrowseRoute(BrowseTarget.MappingCurrentPath)
-                }
-            )
-        }
-        Spacer(Modifier.height(RULE_CONFIG_DIALOG_FIELD_SPACING))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextField(
-                value = dialogMappingFinalPathInput,
-                onValueChange = {
-                    dialogMappingFinalPathInput = it
-                    mappingDialogErrorResId = null
-                },
-                label = stringResource(R.string.rule_config_mapping_final_path),
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(Modifier.width(RULE_CONFIG_DIALOG_FIELD_SPACING))
-            TextButton(
-                text = stringResource(R.string.rule_config_browse),
-                onClick = {
-                    browseRoute = PathBrowseRoute(BrowseTarget.MappingTargetPath)
-                }
-            )
-        }
+        RulePathField(
+            value = dialogMappingRequestPathInput,
+            onValueChange = {
+                dialogMappingRequestPathInput = it
+                mappingDialogErrorResId = null
+            },
+            label = stringResource(R.string.rule_config_mapping_request_path),
+            onBrowse = { browseRoute = PathBrowseRoute(BrowseTarget.MappingCurrentPath) },
+        )
+        MappingDirectionArrow()
+        RulePathField(
+            value = dialogMappingFinalPathInput,
+            onValueChange = {
+                dialogMappingFinalPathInput = it
+                mappingDialogErrorResId = null
+            },
+            label = stringResource(R.string.rule_config_mapping_final_path),
+            onBrowse = { browseRoute = PathBrowseRoute(BrowseTarget.MappingTargetPath) },
+        )
         mappingDialogErrorResId?.let { errorResId ->
             Spacer(Modifier.height(RULE_CONFIG_DIALOG_FIELD_SPACING))
             Text(
@@ -812,6 +773,7 @@ fun RuleConfigPage(packageName: String, appName: String, userId: Int = 0, onBack
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp),
+                    verticalArrangement = Arrangement.spacedBy(RULE_CONFIG_DIALOG_FIELD_SPACING),
                 ) {
                     items(templates, key = { it.id }) { template ->
                         TemplatePickerOption(
@@ -1020,42 +982,6 @@ private data class PathBrowseRoute(
     val target: BrowseTarget,
     val isFromDialog: Boolean = true,
 )
-
-// 模板选择条目
-@Composable
-private fun TemplatePickerOption(
-    name: String,
-    isPicked: Boolean,
-    testTag: String,
-    onClick: () -> Unit,
-) {
-    val colorScheme = MiuixTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .then(if (isPicked) Modifier.background(colorScheme.primaryContainer) else Modifier)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp)
-            .testTag(testTag),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = if (isPicked) AppIcons.RadioOn else AppIcons.RadioOff,
-            contentDescription = null,
-            tint = if (isPicked) colorScheme.primary else colorScheme.onSurfaceVariantSummary,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = name,
-            style = MiuixTheme.textStyles.body1,
-            color = colorScheme.onSurface,
-            fontWeight = if (isPicked) FontWeight(600) else FontWeight(500),
-        )
-    }
-    Spacer(Modifier.height(RULE_CONFIG_ITEM_SPACING))
-}
 
 // 弹窗按钮行
 @Composable

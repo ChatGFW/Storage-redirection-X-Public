@@ -162,6 +162,7 @@
     <string name="rule_config_delete_mapping_confirm">Delete this mapping?</string>
     <string name="rule_config_mapping_request_path">Request Path</string>
     <string name="rule_config_mapping_final_path">Final Path</string>
+    <string name="rule_config_mapping_hint">When the app accesses the request path, it actually reads and writes the final path.</string>
     <string name="rule_config_no_paths">No allowed paths configured</string>
     <string name="rule_config_no_mappings">No mappings configured</string>
     <string name="rule_config_restart_hint">Changes will automatically stop the target app to take effect</string>

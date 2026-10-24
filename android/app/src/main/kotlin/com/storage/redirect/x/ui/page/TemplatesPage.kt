@@ -421,16 +421,14 @@ private fun TemplateEditorPage(
             showPathDialog.value = false
         },
     ) {
-        TextField(
+        RulePathField(
             value = dialogPathInput,
             onValueChange = {
                 dialogPathInput = it
                 pathDialogErrorResId = null
             },
             label = stringResource(R.string.rule_config_real_path),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("template_allowed_path_input"),
+            modifier = Modifier.testTag("template_allowed_path_input"),
         )
         pathDialogErrorResId?.let { errorResId ->
             Spacer(Modifier.height(TEMPLATE_DIALOG_FIELD_SPACING))
@@ -468,33 +466,30 @@ private fun TemplateEditorPage(
     WindowDialog(
         show = showMappingDialog.value,
         title = stringResource(if (isEditingMapping) R.string.rule_config_edit_mapping else R.string.rule_config_add_mapping),
+        summary = stringResource(R.string.rule_config_mapping_hint),
         onDismissRequest = {
             mappingDialogErrorResId = null
             showMappingDialog.value = false
         },
     ) {
-        TextField(
+        RulePathField(
             value = dialogMappingRequestPathInput,
             onValueChange = {
                 dialogMappingRequestPathInput = it
                 mappingDialogErrorResId = null
             },
             label = stringResource(R.string.rule_config_mapping_request_path),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("template_mapping_request_input"),
+            modifier = Modifier.testTag("template_mapping_request_input"),
         )
-        Spacer(Modifier.height(TEMPLATE_DIALOG_FIELD_SPACING))
-        TextField(
+        MappingDirectionArrow()
+        RulePathField(
             value = dialogMappingFinalPathInput,
             onValueChange = {
                 dialogMappingFinalPathInput = it
                 mappingDialogErrorResId = null
             },
             label = stringResource(R.string.rule_config_mapping_final_path),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("template_mapping_final_input"),
+            modifier = Modifier.testTag("template_mapping_final_input"),
         )
         mappingDialogErrorResId?.let { errorResId ->
             Spacer(Modifier.height(TEMPLATE_DIALOG_FIELD_SPACING))

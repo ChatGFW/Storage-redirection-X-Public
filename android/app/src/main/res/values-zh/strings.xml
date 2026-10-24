@@ -161,6 +161,7 @@
     <string name="rule_config_delete_mapping_confirm">确定要删除这条映射吗？</string>
     <string name="rule_config_mapping_request_path">请求路径</string>
     <string name="rule_config_mapping_final_path">最终路径</string>
+    <string name="rule_config_mapping_hint">应用访问请求路径时，实际读写的是最终路径。</string>
     <string name="rule_config_no_paths">未配置允许路径</string>
     <string name="rule_config_no_mappings">未配置映射</string>
     <string name="rule_config_restart_hint">修改后将自动停止目标应用以使配置生效</string>
