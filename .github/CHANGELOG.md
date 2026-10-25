@@ -1,15 +1,19 @@
-- 改进目录选择器，支持搜索、排序、面包屑导航和跨目录多选，并显示隐藏目录。
-- 优化应用列表加载，修复多用户列表读取，并显示共享用户组标识。
-- 支持在规则配置页直接应用模板，改进共享用户组确认操作。
-- 更新悬浮底栏交互与外观，提升主题组件兼容性。
-- 修正英文应用数量提示，完善中文和英文的语言资源配置。
+- Unify the interface with Miuix and MingCute icons, and redesign the home, permission, settings, and About pages
+- Add pull to refresh and a floating batch action bar to the app list
+- Redesign the folder picker with a path panel and floating bar for navigation, selection, and confirmation
+- Open templates from cards and reuse rule cards and selection dialogs throughout template editing
+- Add page transitions, predictive back, and independent blur controls for the top and bottom bars
+- Save file access records in a database with pagination, display aggregation, and retention controls, preserving history across module upgrades
+- Add stable and test update channels with numeric version comparison and shared launch and manual update dialogs
+- Display release notes in the app language using a flat English and Chinese format
 
-<details>
-<summary>English</summary>
+---
 
-- Improve the directory picker with search, sorting, breadcrumbs, cross-directory selection, and hidden directories.
-- Improve application list loading, fix enumeration for the selected Android user, and identify shared UID groups.
-- Apply templates directly from rule configuration and improve shared UID confirmation actions.
-- Update floating navigation interactions and appearance, and improve theme component compatibility.
-- Correct English application-count messages and refine English and Chinese locale resources.
-</details>
+- 统一采用 Miuix 界面和 MingCute 图标，重新设计首页、权限引导、设置和关于页面
+- 为应用列表加入下拉刷新和悬浮批量操作栏
+- 重新设计目录选择器，用路径面板和悬浮栏改进导航、多选和确认操作
+- 支持点击卡片打开模板，在模板编辑中统一规则卡片和选择弹窗
+- 加入页面转场、预测返回，以及顶栏和底栏独立的模糊开关
+- 使用数据库保存文件访问记录，支持分页、重复记录合并和保存时间设置，模块升级后保留历史记录
+- 加入正式版和测试版更新通道，按版本数字比较，统一启动检查和手动检查的更新弹窗
+- 按应用语言展示更新说明，采用英文在前、中文在后的平铺格式
