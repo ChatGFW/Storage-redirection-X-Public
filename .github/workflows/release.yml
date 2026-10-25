@@ -252,12 +252,15 @@ jobs:
           set -euo pipefail
 
           changelog_file="$(mktemp)"
-          if [ -n "${CHANGELOG_BASE64}" ]; then
-            printf '%s' "${CHANGELOG_BASE64}" | base64 -d > "${changelog_file}"
-          else
-            echo "## 更新日志" > "${changelog_file}"
-            echo "" >> "${changelog_file}"
-            echo "暂无更新内容。" >> "${changelog_file}"
+          printf '%s' "${CHANGELOG_BASE64}" | base64 -d > "${changelog_file}"
+          if [ ! -s "${changelog_file}" ]; then
+            echo "更新日志为空，停止发布" >&2
+            exit 1
+          fi
+
+          is_prerelease=false
+          if [[ "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta[0-9]+$ ]]; then
+            is_prerelease=true
           fi
 
           release_notes_file="$(mktemp)"
@@ -269,11 +272,13 @@ jobs:
           if gh release view "${RELEASE_TAG}" > /dev/null 2>&1; then
             gh release edit "${RELEASE_TAG}" \
               --title "${RELEASE_NAME}" \
+              --prerelease="${is_prerelease}" \
               --notes-file "${release_notes_file}"
           else
             gh release create "${RELEASE_TAG}" \
               --target main \
               --title "${RELEASE_NAME}" \
+              --prerelease="${is_prerelease}" \
               --notes-file "${release_notes_file}"
           fi
 

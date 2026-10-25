@@ -34,25 +34,23 @@ user_invocable: true
 
 ## 更新日志格式
 
-使用中英文双语，默认展示中文，英文放入折叠块。正文不写版本号、不写“更新内容 / Changelog / Highlights”等标题；GitHub Release 标题负责展示版本。
+使用中英文双语，英文在前、中文在后，中间用单独一行 `---` 分隔。正文不写版本号或分类标题；GitHub Release 标题负责展示版本。
 
 固定结构如下：
 
 ```markdown
-- 中文更新 1
-- 中文更新 2
-
-<details>
-<summary>English</summary>
-
 - English change 1
 - English change 2
-</details>
+
+---
+
+- 中文改动描述 1
+- 中文改动描述 2
 ```
 
 规则：
-- 中文列表在前，英文列表放在 `<details>` 内
+- 英文列表在前，中文列表在后，中间只有一条分隔线，中英文条目一一对应
 - 不写任何 markdown 标题行，包括 `#`、`##`、`###`
 - 每条以动词或清晰动作开头，简洁描述用户可感知的变化
-- 英文折叠块标题固定为 `English`
+- 条目平铺，不折叠，不使用 emoji，条目末尾不加标点
 - 文件末尾无空行

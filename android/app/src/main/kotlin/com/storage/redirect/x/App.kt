@@ -48,10 +48,13 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.storage.redirect.x.data.cache.AppPreferences
 import com.storage.redirect.x.data.cache.PreferenceKeys
 import com.storage.redirect.x.data.service.RootService
 import com.storage.redirect.x.ui.component.bottombar.AppNavigationBar
+import com.storage.redirect.x.ui.component.UpdateDialogs
 import com.storage.redirect.x.ui.component.bottombar.BottomBarAppearanceState
 import com.storage.redirect.x.ui.component.bottombar.FloatingBottomBar
 import com.storage.redirect.x.ui.component.bottombar.FloatingBottomBarTab
@@ -73,6 +76,7 @@ import com.storage.redirect.x.ui.page.RuleConfigPage
 import com.storage.redirect.x.ui.page.SettingsPage
 import com.storage.redirect.x.ui.page.TemplatesPage
 import com.storage.redirect.x.ui.page.UpdatePage
+import com.storage.redirect.x.ui.page.UpdateViewModel
 import com.storage.redirect.x.ui.theme.AppTheme
 import com.storage.redirect.x.ui.theme.AppThemeController
 import com.storage.redirect.x.ui.theme.AppThemeSettings
@@ -155,6 +159,8 @@ fun App(
         }
 
         val pageStack = rememberPageStack<AppPage>()
+        val updateViewModel: UpdateViewModel = viewModel()
+        val updateState by updateViewModel.uiState.collectAsStateWithLifecycle()
         // 从配置页返回时递增，驱动应用列表刷新配置
         var configVersion by remember { mutableIntStateOf(0) }
         var bottomBarAppearance by remember {
@@ -264,7 +270,14 @@ fun App(
                         bottomInnerPadding = navigationBarsBottom,
                     )
                     AppPage.Licenses -> OpenSourceLicensesPage(onBack = onBack, bottomInnerPadding = navigationBarsBottom)
-                    AppPage.Update -> UpdatePage(onBack = onBack, bottomInnerPadding = navigationBarsBottom)
+                    AppPage.Update -> UpdatePage(
+                        uiState = updateState,
+                        onCheck = { updateViewModel.checkForUpdate() },
+                        onCheckOnLaunchChange = updateViewModel::setCheckOnLaunch,
+                        onChannelChange = updateViewModel::setChannel,
+                        onBack = onBack,
+                        bottomInnerPadding = navigationBarsBottom,
+                    )
                 }
             },
         ) {
@@ -382,6 +395,7 @@ fun App(
                 }
             }
         }
+        UpdateDialogs(updateState.result, updateState.isDialogVisible, updateViewModel::dismissDialog)
         }
     }
     }

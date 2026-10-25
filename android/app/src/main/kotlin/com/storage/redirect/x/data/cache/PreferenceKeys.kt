@@ -10,7 +10,7 @@ object PreferenceKeys {
     const val COLOR_SPEC = "color_spec"
     const val SMOOTH_ROUNDING = "smooth_rounding"
     const val CHECK_UPDATE_ON_LAUNCH = "check_update_on_launch"
-    const val IGNORED_UPDATE_VERSION = "ignored_update_version"
+    const val UPDATE_CHANNEL = "update_channel"
     const val FLOATING_BOTTOM_BAR_ENABLED = "floating_bottom_bar_enabled"
     const val BOTTOM_BAR_BLUR_ENABLED = "bottom_bar_blur_enabled"
     const val TOP_BAR_BLUR_ENABLED = "top_bar_blur_enabled"

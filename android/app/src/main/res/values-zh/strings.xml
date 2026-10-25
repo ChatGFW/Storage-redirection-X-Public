@@ -244,7 +244,12 @@
     <string name="settings_update_download">前往下载</string>
     <string name="settings_update_failed">检查更新失败</string>
     <string name="settings_update_toast">发现新版本：v%1$s</string>
-    <string name="settings_update_release_notes">更新内容</string>
+    <string name="settings_update_dialog_title">发现新版本 v%1$s</string>
+    <string name="settings_update_not_now">暂不更新</string>
+    <string name="settings_update_open_failed">无法打开下载页面</string>
+    <string name="settings_update_channel">更新通道</string>
+    <string name="settings_update_channel_stable">正式版</string>
+    <string name="settings_update_channel_test">测试版</string>
     <string name="settings_about">关于</string>
     <string name="settings_open_source_licenses">开源协议</string>
     <string name="about_project_repository">项目主页</string>

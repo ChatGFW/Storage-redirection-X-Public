@@ -4,21 +4,16 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.lifecycleScope
-import com.storage.redirect.x.data.cache.AppPreferences
 import com.storage.redirect.x.data.cache.DeviceInfoCache
 import com.storage.redirect.x.data.cache.HomeDataCache
 import com.storage.redirect.x.data.cache.PreferenceKeys
-import com.storage.redirect.x.data.repository.UpdateRepository
 import com.storage.redirect.x.util.BackupRestoreNotifier
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -60,26 +55,6 @@ class MainActivity : ComponentActivity() {
         }
 
         consumeDebugPage(intent)
-
-        // 根据偏好设置决定是否在启动时检查更新
-        if (AppPreferences.getBoolean(PreferenceKeys.CHECK_UPDATE_ON_LAUNCH, true)) {
-            val activity = this
-            lifecycleScope.launch {
-                try {
-                    val result = UpdateRepository().checkForUpdate()
-                    val ignored = AppPreferences.getString(PreferenceKeys.IGNORED_UPDATE_VERSION, "")
-                    if (result.hasUpdate && result.latestVersion != ignored) {
-                        Toast.makeText(
-                            activity,
-                            getString(R.string.settings_update_toast, result.latestVersion),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                } catch (_: Exception) {
-                    // 静默失败，不打扰用户
-                }
-            }
-        }
     }
 
     override fun onNewIntent(intent: Intent) {
