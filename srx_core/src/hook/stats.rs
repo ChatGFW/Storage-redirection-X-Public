@@ -67,7 +67,10 @@ impl InterceptHub {
             *name = package_name.to_string();
         }
 
-        log::info!("hook manager init pkg={} redirect=true", self.get_package_name());
+        log::info!(
+            "hook manager init pkg={} redirect=true",
+            self.get_package_name()
+        );
 
         self.is_initialized.store(true, Ordering::Relaxed);
         true
