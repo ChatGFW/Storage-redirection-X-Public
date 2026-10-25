@@ -26,9 +26,10 @@
 !/android/app/proguard-rules.pro
 !/android/app/src/
 !/android/app/src/**/
-!/android/app/src/**/*.kt
-!/android/app/src/test/**/*.java
-!/android/app/src/**/*.xml
+!/android/app/src/main/**/*.kt
+!/android/app/src/debug/**/*.kt
+!/android/app/src/main/**/*.xml
+!/android/app/src/debug/**/*.xml
 !/android/app/src/main/res/**/*.png
 !/android/app/src/main/res/resources.properties
 

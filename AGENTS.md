@@ -8,7 +8,6 @@ Storage Redirect X 由 Android 配置应用和 Rust Zygisk 模块组成，通过
 |---|---|
 | `android/app/src/main/` | Kotlin 应用、Compose 界面与资源 |
 | `android/app/src/debug/` | 调试包专用命令 Provider |
-| `android/app/src/test/` | 已有 JVM 测试 |
 | `android/gradle/` | 依赖版本与 Gradle wrapper |
 | `srx_core/src/` | Rust 核心与日志守护进程 |
 | `srx_core/java_src/` | Java Hook 源码，构建时生成内嵌 DEX |
@@ -46,12 +45,17 @@ Storage Redirect X 由 Android 配置应用和 Rust Zygisk 模块组成，通过
 - 变量靠近使用处声明，锁、borrow 与 `RefCell::borrow_mut` 的持有范围最小化。
 - 无语义变更需求时禁止全量重排代码，不夹带无关清理。
 
-### 卫语句与错误处理
+### 卫语句
 
 - 先处理错误和边界条件并提前返回；循环先跳过无关项，正常流程保持靠左。对称的二选一逻辑可保留 `if/else`。
-- **禁止过度防御**：只在真实失败边界校验，不重复检查已由调用方保证的条件，不逐层包裹 `try/catch` 或 `try/except`。
-- 编写 fallback 前必须证明该分支现实中可达且有明确语义；无法处理的错误返回给上层，不用默认值掩盖失败。
 - `EEXIST` 等可预期系统结果不作为 warning；有条件的副作用仅在条件成立时执行。
+
+### 禁止过度防御
+
+- 只在真实可能失败的边界校验；前置条件由调用方保证时，被调方不重复判空或校验，不做双向检查。
+- 仅在确实会抛异常、且本层能处理的边界捕获异常，不逐行或逐层包裹 `try/catch`、`try/except`，不用异常代替正常分支。
+- 写兜底分支前必须确认它现实中可达，且有明确的处理语义；禁止无依据的默认值、重试和兼容分支。
+- 本层无法处理的错误交给上层，不静默忽略，不用默认值把失败伪装成成功；协程取消必须继续传播。
 
 ### Rust / Zygisk
 
@@ -102,8 +106,8 @@ cargo clippy --manifest-path srx_core/Cargo.toml --target aarch64-linux-android 
 
 - 本地模块与 AVD 验证优先 `--debug`，保留符号并关闭 LTO、跳过 strip；`build-apk` 产出 release 包，本地应用调试使用 `assembleDebug`。
 - 修改后必须保证可编译且无 warning；改动 `srx_core/` 必跑 clippy，改动 `android/` 必跑 `lintDebug`。执行结果与源码检查必须区分，不把未执行的验证写成通过。
-- **默认不新建测试文件**；仅在用户明确要求或验收条件确实需要时添加，不为每次修改自动生成测试。
-- 不新建测试文件不等于跳过验证；已有测试、构建、lint 和实机检查按改动范围执行。
+- **默认不写测试**：除非用户明确要求，不新建测试文件、不添加测试依赖，也不把验收脚本放进产品源码。
+- 不写测试不等于跳过验证；按改动范围使用现有构建、静态检查和调试工具，必要时执行已有测试或实机检查。
 - 修改构建白名单时核对整个索引，确保源码、资源、Java Hook 输入、原生依赖和 Gradle wrapper 均可跟踪；编译成功不代表缺失 DEX 时的 Java Hook 可用。
 
 ## 设备与文件安全
@@ -136,7 +140,7 @@ MSYS_NO_PATHCONV=1 adb -s <device_id> exec-out screencap -d <display_id> -p > <o
 - [ ] 改动位于负责该行为的模块，未夹带其他任务？
 - [ ] 文件大小、命名、卫语句与最小锁作用域符合规范？
 - [ ] 没有重复防御、无依据兜底或掩盖失败？
-- [ ] 没有默认生成测试文件，必要验证已有真实结果？
+- [ ] 没有擅自添加测试源码或依赖，必要验证已有真实结果？
 - [ ] 调试实现仅在调试包生效，Root 与文件 I/O 不在主线程？
 - [ ] 新文件可通过白名单，许可证与编译输入没有被排除？
 - [ ] 临时方案与记录位于忽略目录，两个客户端的共享 skills 一致？

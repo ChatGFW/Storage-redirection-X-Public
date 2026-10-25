@@ -8,8 +8,6 @@ core-ktx = "1.19.1"
 miuix = "0.9.4"
 coroutines = "1.11.0"
 gson = "2.14.0"
-junit4 = "4.13.2"
-robolectric = "4.17"
 material3 = "1.5.0-beta02"
 materialKolor = "5.0.1"
 hiddenapibypass = "6.2"
@@ -32,8 +30,6 @@ coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-andro
 compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 material-kolor = { group = "com.materialkolor", name = "material-kolor", version.ref = "materialKolor" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
-junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
-robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 hiddenapibypass = { module = "org.lsposed.hiddenapibypass:hiddenapibypass", version.ref = "hiddenapibypass" }
 
 [plugins]
