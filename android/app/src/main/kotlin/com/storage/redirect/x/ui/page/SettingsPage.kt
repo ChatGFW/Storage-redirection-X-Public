@@ -214,12 +214,14 @@ private fun SettingsPageMiuix(
             Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
                 SwitchPreference(
                     title = stringResource(R.string.file_monitor_enabled),
+                    startAction = { PreferenceIcon(AppIcons.FileMonitor, isEnabled = canOperateRoot) },
                     checked = uiState.isFileMonitorEnabled,
                     enabled = canOperateRoot,
                     onCheckedChange = settingsViewModel::setFileMonitorEnabled,
                 )
                 OverlayDropdownPreference(
                     title = stringResource(R.string.file_monitor_retention),
+                    startAction = { PreferenceIcon(AppIcons.TimeDuration, isEnabled = canOperateRoot) },
                     items = listOf(
                         stringResource(R.string.file_monitor_keep_hour),
                         stringResource(R.string.file_monitor_keep_six_hours),
