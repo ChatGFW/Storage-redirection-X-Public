@@ -6,7 +6,6 @@ use std::sync::RwLock;
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU64, Ordering};
 
 const STATS_TAG: &str = "Stats";
-const SELF_MODULE_PATH: &str = "libsrx_core.so";
 const FLUSH_THRESHOLD: i32 = 32;
 const FLUSH_INTERVAL_MS: i64 = 2000;
 
@@ -14,8 +13,6 @@ pub struct InterceptHub {
     package_name: RwLock<String>,
     is_initialized: AtomicBool,
     is_hooks_installed: AtomicBool,
-    is_monitor_only: AtomicBool,
-    is_monitor_enabled: AtomicBool,
     stats: AtomicStats,
     pending_redirect_count: AtomicI32,
     last_flush_ms: AtomicI64,
@@ -57,12 +54,7 @@ impl InterceptHub {
         &INTERCEPT_HUB
     }
 
-    pub fn init(
-        &self,
-        package_name: &str,
-        is_monitor_only: bool,
-        is_monitor_enabled: bool,
-    ) -> bool {
+    pub fn init(&self, package_name: &str) -> bool {
         if self.is_initialized.load(Ordering::Relaxed) {
             return true;
         }
@@ -75,32 +67,10 @@ impl InterceptHub {
             *name = package_name.to_string();
         }
 
-        self.is_monitor_only
-            .store(is_monitor_only, Ordering::Relaxed);
-        self.is_monitor_enabled
-            .store(is_monitor_enabled, Ordering::Relaxed);
-
-        log::info!(
-            "hook manager init pkg={} redirect={} monitor={}",
-            self.get_package_name(),
-            !is_monitor_only,
-            is_monitor_enabled
-        );
+        log::info!("hook manager init pkg={} redirect=true", self.get_package_name());
 
         self.is_initialized.store(true, Ordering::Relaxed);
         true
-    }
-
-    pub fn is_monitor_only(&self) -> bool {
-        self.is_monitor_only.load(Ordering::Relaxed)
-    }
-
-    pub fn is_monitor_enabled(&self) -> bool {
-        self.is_monitor_enabled.load(Ordering::Relaxed)
-    }
-
-    pub fn is_redirect_enabled(&self) -> bool {
-        !self.is_monitor_only()
     }
 
     pub fn get_package_name(&self) -> String {
@@ -146,20 +116,27 @@ impl InterceptHub {
         }
 
         log::info!("hook install start");
-        let errno = srx_hook::init(srx_hook::HookMode::Automatic, false);
+        for image in [
+            "libsrx_core.so",
+            "storage.redirect.x/zygisk/arm64-v8a.so",
+            "storage.redirect.x/zygisk/x86_64.so",
+        ] {
+            let _ = srx_hook::add_ignore(image);
+        }
+        // 媒体服务在 FUSE 启动后显式刷新，避免动态加载回调与 Java Hook 重入。
+        let mode = if policy::is_media_provider_package(&self.get_package_name()) {
+            srx_hook::HookMode::Manual
+        } else {
+            srx_hook::HookMode::Automatic
+        };
+        let errno = srx_hook::init(mode, false);
         if !errno.is_ok() {
             log::warn!("srx_hook init failed err={:?}", errno);
             return false;
         }
 
-        let ignore_errno = srx_hook::add_ignore(SELF_MODULE_PATH);
-        if !ignore_errno.is_ok() {
-            log::warn!("add_ignore failed err={:?}", ignore_errno);
-        }
-
         let is_system_writer = policy::is_system_writer_package(&self.get_package_name());
-        let (profile_mask, profile_name) =
-            select_hook_profile(is_system_writer, self.is_monitor_only());
+        let (profile_mask, profile_name) = select_hook_profile(is_system_writer);
 
         let selected_hook_count = count_hooks_for_profile(profile_mask);
         log::info!(
@@ -298,15 +275,9 @@ impl InterceptHub {
     }
 }
 
-fn select_hook_profile(is_system_writer: bool, is_monitor_only: bool) -> (u32, &'static str) {
+fn select_hook_profile(is_system_writer: bool) -> (u32, &'static str) {
     if is_system_writer {
-        if is_monitor_only {
-            return (HookProfile::SystemWriter as u32, "system-writer-monitor");
-        }
         return (HookProfile::SystemWriter as u32, "system-writer");
-    }
-    if is_monitor_only {
-        return (HookProfile::Monitor as u32, "monitor");
     }
     (HookProfile::Full as u32, "full")
 }
@@ -315,8 +286,6 @@ static INTERCEPT_HUB: InterceptHub = InterceptHub {
     package_name: RwLock::new(String::new()),
     is_initialized: AtomicBool::new(false),
     is_hooks_installed: AtomicBool::new(false),
-    is_monitor_only: AtomicBool::new(false),
-    is_monitor_enabled: AtomicBool::new(false),
     stats: AtomicStats::new(),
     pending_redirect_count: AtomicI32::new(0),
     last_flush_ms: AtomicI64::new(0),

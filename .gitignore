@@ -27,6 +27,7 @@
 !/android/app/src/
 !/android/app/src/**/
 !/android/app/src/**/*.kt
+!/android/app/src/test/**/*.java
 !/android/app/src/**/*.xml
 !/android/app/src/main/res/**/*.png
 !/android/app/src/main/res/resources.properties

@@ -1,4 +1,6 @@
 // 日志守护进程：经 socket 收包，按 tag 分流到滚动日志与统计文件
+#[path = "../../monitor/query.rs"]
+mod monitor_query;
 mod rolling;
 mod transport;
 
@@ -7,21 +9,19 @@ use rolling::RollingLog;
 use std::fs;
 use std::io::{self, BufRead, BufReader, Write};
 use std::mem;
+use std::path::Path;
 use transport::{ClientSocket, bind_log_socket};
 
 const LOGS_DIR: &str = "/data/adb/modules/storage.redirect.x/logs";
 const RUNNING_LOG: &str = "/data/adb/modules/storage.redirect.x/logs/running.log";
-const FILE_MONITOR_LOG: &str = "/data/adb/modules/storage.redirect.x/logs/file_monitor.log";
 const MEDIA_STATE_LOG: &str = "/data/adb/modules/storage.redirect.x/logs/media_provider_state.log";
 const APP_STATUS_LOG: &str = "/data/adb/modules/storage.redirect.x/logs/app_status.log";
 const STATS_FILE: &str = "/data/adb/modules/storage.redirect.x/stats";
 const MAX_RUNNING_LINES: usize = 30_000;
-const MAX_MONITOR_LINES: usize = 30_000;
 const MAX_MEDIA_STATE_LINES: usize = 30_000;
 const MAX_APP_STATUS_LINES: usize = 30_000;
 const RECV_BUFFER_SIZE: usize = 8192;
 
-const TAG_FILE_MONITOR: &str = "FileMonitorOp";
 const TAG_MEDIA_STATE: &str = "MediaState";
 const TAG_APP_STATUS: &str = "AppStatus";
 const TAG_MEDIA_STATE_FLUSH: &str = "MediaStateFlush";
@@ -36,6 +36,30 @@ fn main() {
     let arg = std::env::args().nth(2);
     let result = match command.as_deref() {
         None => run_daemon(),
+        Some("monitor-query") => {
+            let args: Vec<String> = std::env::args().collect();
+            let before = args
+                .get(2)
+                .and_then(|s| s.parse::<i64>().ok())
+                .unwrap_or(0)
+                .max(0);
+            let after = args
+                .get(3)
+                .and_then(|s| s.parse::<i64>().ok())
+                .unwrap_or(0)
+                .max(0);
+            let limit = args
+                .get(4)
+                .and_then(|s| s.parse::<usize>().ok())
+                .unwrap_or(500)
+                .clamp(1, 500);
+            monitor_query::run(
+                Path::new("/data/adb/modules/storage.redirect.x"),
+                before,
+                after,
+                limit,
+            )
+        }
         Some("emit-stream") => run_emit_stream(arg),
         Some("control") => run_control(arg),
         Some(_) => Err(io::Error::new(
@@ -45,6 +69,7 @@ fn main() {
     };
     if let Err(error) = result {
         let _ = writeln!(io::stderr(), "srx_logd: {error}");
+        std::process::exit(1);
     }
 }
 
@@ -63,6 +88,26 @@ fn run_daemon() -> io::Result<()> {
             continue;
         };
         state.handle(text);
+    }
+}
+
+fn run_monitor_command(command: &str) -> io::Result<()> {
+    let status = std::process::Command::new("/system/bin/app_process")
+        .env(
+            "CLASSPATH",
+            "/data/adb/modules/storage.redirect.x/monitor.dex",
+        )
+        .args([
+            "/system/bin",
+            "org.srx.monitor.MonitorServer",
+            "/data/adb/modules/storage.redirect.x",
+            command,
+        ])
+        .status()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(io::Error::other("monitor control failed"))
     }
 }
 
@@ -93,6 +138,12 @@ fn run_control(command: Option<String>) -> io::Result<()> {
             "missing control command",
         ));
     };
+    if command == "monitor-policy" {
+        return run_monitor_command("policy");
+    }
+    if command == "clear-monitor" || command == CONTROL_CLEAR_ALL {
+        run_monitor_command("clear")?;
+    }
     let Some(socket) = ClientSocket::new() else {
         return Err(io::Error::last_os_error());
     };
@@ -101,7 +152,6 @@ fn run_control(command: Option<String>) -> io::Result<()> {
 
 struct LogState {
     running: RollingLog,
-    monitor: RollingLog,
     media_state: RollingLog,
     app_status: RollingLog,
     stats_total: i64,
@@ -112,7 +162,6 @@ impl LogState {
     fn new() -> io::Result<Self> {
         Ok(Self {
             running: RollingLog::open(RUNNING_LOG, MAX_RUNNING_LINES)?,
-            monitor: RollingLog::open(FILE_MONITOR_LOG, MAX_MONITOR_LINES)?,
             media_state: RollingLog::open(MEDIA_STATE_LOG, MAX_MEDIA_STATE_LINES)?,
             app_status: RollingLog::open(APP_STATUS_LOG, MAX_APP_STATUS_LINES)?,
             stats_total: read_stats_total(),
@@ -128,7 +177,6 @@ impl LogState {
         match tag {
             TAG_STATS => self.handle_stats(message),
             TAG_CONTROL => self.handle_control(message),
-            TAG_FILE_MONITOR => self.monitor.append(message),
             TAG_MEDIA_STATE => self.media_state.append(message),
             TAG_APP_STATUS => self.app_status.append(message),
             TAG_MEDIA_STATE_FLUSH => self.media_state.flush(),
@@ -168,7 +216,6 @@ impl LogState {
 
     fn clear_all(&mut self) {
         self.running.clear();
-        self.monitor.clear();
         self.media_state.clear();
         self.app_status.clear();
         self.stats_total = 0;
@@ -178,7 +225,6 @@ impl LogState {
 
     fn flush_all(&mut self) {
         self.running.flush();
-        self.monitor.flush();
         self.media_state.flush();
         self.app_status.flush();
         if self.stats_dirty > 0 {
@@ -195,7 +241,6 @@ impl LogState {
 impl Drop for LogState {
     fn drop(&mut self) {
         self.running.flush();
-        self.monitor.flush();
         self.media_state.flush();
         self.app_status.flush();
         if self.stats_dirty > 0 {

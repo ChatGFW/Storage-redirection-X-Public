@@ -7,6 +7,7 @@ sys.dont_write_bytecode = True
 
 import argparse
 import hashlib
+import json
 import platform
 import shutil
 import subprocess
@@ -278,9 +279,20 @@ def build_rust_module(console: Console, project_root: Path, rust_root: Path, lib
             "CARGO_PROFILE_RELEASE_DEBUG": "true",
         })
 
-    result = run_process(console, "cargo", ["build", "-p", "srx_core", "--release", "--target", target, "--lib", "--bin", LOGD_BIN_NAME], cwd=project_root, env=env)
+    result = run_process(console, "cargo", ["build", "-p", "srx_core", "--release", "--target", target, "--lib", "--bin", LOGD_BIN_NAME, "--message-format=json-render-diagnostics"], cwd=project_root, env=env)
     if result.returncode != 0:
         fail(f"Rust build failed abi={abi}")
+
+    dex_output = None
+    for line in result.stdout.splitlines():
+        try:
+            message = json.loads(line)
+        except ValueError:
+            continue
+        if message.get("reason") == "build-script-executed" and "srx_core" in message.get("package_id", ""):
+            dex_output = Path(message["out_dir"]) / "Hooker.dex"
+    if dex_output is None or not dex_output.exists():
+        fail("monitor DEX build output missing")
 
     target_root = cargo_target_root(project_root)
     built_so = target_root / target / "release" / CORE_SO_NAME
@@ -293,6 +305,7 @@ def build_rust_module(console: Console, project_root: Path, rust_root: Path, lib
     abi_output.mkdir(parents=True, exist_ok=True)
     shutil.copy2(built_so, abi_output / CORE_SO_NAME)
     shutil.copy2(built_logd, abi_output / LOGD_BIN_NAME)
+    shutil.copy2(dex_output, abi_output / "monitor.dex")
     console.ok(f"Rust build done abi={abi} so={CORE_SO_NAME} bin={LOGD_BIN_NAME}")
 
 
@@ -356,7 +369,7 @@ def package_module(console: Console, project_root: Path, module_assets_root: Pat
     write_lf_text(temp_dir / "module.prop", module_prop)
     write_lf_text(temp_dir / "module_version.txt", f"{version.name}\n")
 
-    for name in ("action.sh", "customize.sh", "post-fs-data.sh", "service.sh", "sepolicy.rule", "uninstall.sh"):
+    for name in ("action.sh", "customize.sh", "post-fs-data.sh", "service.sh", "persistent_data.sh", "sepolicy.rule", "uninstall.sh"):
         src = module_assets_root / name
         if not src.exists():
             fail(f"missing module template: {name}")
@@ -383,6 +396,8 @@ def package_module(console: Console, project_root: Path, module_assets_root: Pat
         abi_bin_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(logd_bin, abi_bin_dir / LOGD_BIN_NAME)
         console.ok(f"added log daemon abi={abi}")
+
+    shutil.copy2(libs_output_dir / abis[0] / "monitor.dex", temp_dir / "monitor.dex")
 
     normalize_lf_module_text_files(temp_dir)
 

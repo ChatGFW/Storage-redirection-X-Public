@@ -1,4 +1,3 @@
-use super::stats::InterceptHub;
 use crate::platform::paths;
 use libc::{AT_FDCWD, readlink};
 use std::ffi::CString;
@@ -69,14 +68,7 @@ pub fn is_data_media_path_fast(pathname: &str) -> bool {
     paths::starts_with(&normalized, "/data/media/")
 }
 
-// 启用重定向时 /data/media 也视为相关
-pub fn is_relevant_storage_path(hub: &InterceptHub, pathname: &str) -> bool {
-    if is_storage_path_fast(pathname) {
-        return true;
-    }
-
-    if hub.is_redirect_enabled() && is_data_media_path_fast(pathname) {
-        return true;
-    }
-    false
+// 重定向同时处理共享存储路径与 /data/media 别名。
+pub fn is_relevant_storage_path(pathname: &str) -> bool {
+    is_storage_path_fast(pathname) || is_data_media_path_fast(pathname)
 }

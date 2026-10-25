@@ -1,7 +1,6 @@
 #[repr(u32)]
 pub enum HookProfile {
     Full = 1 << 0,
-    Monitor = 1 << 1,
     SystemWriter = 1 << 2,
 }
 
@@ -29,65 +28,49 @@ pub fn build_hook_entries() -> Vec<HookEntry> {
             symbol: "open",
             new_func: super::ops::open::hooked_open as *mut _,
             is_optional: false,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "open64",
             new_func: super::ops::open::hooked_open as *mut _,
             is_optional: true,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "__open_2",
             new_func: super::ops::open::hooked_open as *mut _,
             is_optional: true,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "openat",
             new_func: super::ops::open::hooked_openat as *mut _,
             is_optional: false,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "openat2",
             new_func: super::ops::open::hooked_openat2 as *mut _,
             is_optional: true,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "openat64",
             new_func: super::ops::open::hooked_openat as *mut _,
             is_optional: true,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "__openat_2",
             new_func: super::ops::open::hooked_openat as *mut _,
             is_optional: true,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "creat",
             new_func: super::ops::open::hooked_creat as *mut _,
             is_optional: true,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "stat",
@@ -153,33 +136,25 @@ pub fn build_hook_entries() -> Vec<HookEntry> {
             symbol: "mkdir",
             new_func: super::ops::mutation::hooked_mkdir as *mut _,
             is_optional: false,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "mkdirat",
             new_func: super::ops::mutation::hooked_mkdirat as *mut _,
             is_optional: false,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "mknod",
             new_func: super::ops::mutation::hooked_mknod as *mut _,
             is_optional: true,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "mknodat",
             new_func: super::ops::mutation::hooked_mknodat as *mut _,
             is_optional: true,
-            profile_mask: HookProfile::Full as u32
-                | HookProfile::Monitor as u32
-                | HookProfile::SystemWriter as u32,
+            profile_mask: HookProfile::Full as u32 | HookProfile::SystemWriter as u32,
         },
         HookEntry {
             symbol: "unlink",

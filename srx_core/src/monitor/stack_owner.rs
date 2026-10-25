@@ -1,27 +1,9 @@
 // Java 栈帧回溯：通过 JNI 扫描当前线程的调用栈，识别 shared_uid 进程内的具体包名
 
-use super::SourceIdentity;
 use crate::zygisk::jni;
 use jni_sys::{JNIEnv, jarray, jclass, jint, jmethodID, jobject, jobjectArray, jstring, jvalue};
 
 const MAX_SCAN_FRAMES: jint = 20;
-
-pub fn infer_package_from_java_stack(shared_uid_packages: &str) -> Option<SourceIdentity> {
-    if shared_uid_packages.is_empty() {
-        return None;
-    }
-
-    let packages: Vec<&str> = shared_uid_packages
-        .split(',')
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .collect();
-    if packages.is_empty() {
-        return None;
-    }
-
-    jni::with_env(|env| unsafe { scan_stack_frames(env, &packages) }).flatten()
-}
 
 // 重定向引擎专用：按包名列表扫描栈帧，返回匹配的包名
 pub(crate) fn infer_caller_package_by_stack(packages: &[String]) -> Option<String> {
@@ -30,10 +12,6 @@ pub(crate) fn infer_caller_package_by_stack(packages: &[String]) -> Option<Strin
     }
     let refs: Vec<&str> = packages.iter().map(|s| s.as_str()).collect();
     jni::with_env(|env| unsafe { scan_stack_frames_raw(env, &refs) }).flatten()
-}
-
-unsafe fn scan_stack_frames(env: *mut JNIEnv, packages: &[&str]) -> Option<SourceIdentity> {
-    scan_stack_frames_raw(env, packages).map(|pkg| SourceIdentity::new(pkg, "java_stack", "medium"))
 }
 
 unsafe fn scan_stack_frames_raw(env: *mut JNIEnv, packages: &[&str]) -> Option<String> {

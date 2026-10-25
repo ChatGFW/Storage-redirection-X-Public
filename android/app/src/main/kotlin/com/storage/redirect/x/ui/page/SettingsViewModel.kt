@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -22,9 +23,12 @@ data class SettingsUiState(
     val hasRoot: Boolean? = null,
     val isWorking: Boolean = false,
     val isFuseFixerEnabled: Boolean = false,
+    val isFileMonitorEnabled: Boolean = true,
+    val fileMonitorRetentionSeconds: Long = 604800L,
 )
 
 sealed class SettingsUiEvent {
+    data object SaveFailed : SettingsUiEvent()
     data class BackupFinished(val result: BackupExportResult) : SettingsUiEvent()
     data class RestoreFinished(val result: RestoreResult) : SettingsUiEvent()
 }
@@ -43,6 +47,11 @@ class SettingsViewModel(
 
     init {
         refreshRootStatus()
+        viewModelScope.launch {
+            ConfigRepository.monitorEnabled.filterNotNull().collect { isEnabled ->
+                _uiState.update { it.copy(isFileMonitorEnabled = isEnabled) }
+            }
+        }
     }
 
     // 刷新当前 Root 可用性。
@@ -52,6 +61,9 @@ class SettingsViewModel(
             _uiState.update { it.copy(hasRoot = hasRoot) }
             if (hasRoot) {
                 refreshFuseFixerEnabled()
+                configRepo.readFileMonitorEnabled()
+                val retention = configRepo.readFileMonitorRetention()
+                _uiState.update { it.copy(fileMonitorRetentionSeconds = retention) }
             }
         }
     }
@@ -121,6 +133,31 @@ class SettingsViewModel(
                     isWorking = false,
                 )
             }
+        }
+    }
+
+    fun setFileMonitorEnabled(isEnabled: Boolean) {
+        if (_uiState.value.hasRoot != true || _uiState.value.isWorking) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isWorking = true) }
+            val isSaved = configRepo.setFileMonitorEnabled(isEnabled)
+            _uiState.update { it.copy(isWorking = false) }
+            if (!isSaved) _events.emit(SettingsUiEvent.SaveFailed)
+        }
+    }
+
+    fun setFileMonitorRetention(seconds: Long) {
+        if (_uiState.value.hasRoot != true || _uiState.value.isWorking) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isWorking = true) }
+            val isSaved = configRepo.setFileMonitorRetention(seconds)
+            _uiState.update {
+                it.copy(
+                    isWorking = false,
+                    fileMonitorRetentionSeconds = if (isSaved) seconds else it.fileMonitorRetentionSeconds,
+                )
+            }
+            if (!isSaved) _events.emit(SettingsUiEvent.SaveFailed)
         }
     }
 }

@@ -323,4 +323,27 @@
     <plurals name="browser_path_more_levels">
         <item quantity="other">还有 %1$d 级</item>
     </plurals>
+    <string name="monitor_all">全部操作</string>
+    <string name="file_monitor_retention">文件监视日志保存时间</string>
+    <string name="file_monitor_keep_hour">1 小时</string>
+    <string name="file_monitor_keep_six_hours">6 小时</string>
+    <string name="file_monitor_keep_day">1 天</string>
+    <string name="file_monitor_keep_three_days">3 天</string>
+    <string name="file_monitor_keep_week">7 天</string>
+    <string name="file_monitor_keep_month">30 天</string>
+    <string name="file_monitor_keep_forever">保留至手动清空</string>
+    <string name="file_monitor_save_failed">保存设置失败</string>
+    <string name="file_monitor_action_read">读取</string>
+    <string name="file_monitor_action_write">写入</string>
+    <string name="file_monitor_action_truncate">截断</string>
+    <string name="file_monitor_action_map">内存映射</string>
+    <string name="file_monitor_action_sync">同步</string>
+    <string name="file_monitor_load_more">加载更早记录</string>
+    <string name="file_monitor_repeated">%1$s %2$d 次</string>
+    <string name="file_monitor_gaps">未采集记录：%1$d；保存错误：%2$d</string>
+    <string name="file_monitor_load_failed">读取监视日志失败</string>
+    <string name="file_monitor_daemon_stale">日志服务未响应</string>
+    <string name="file_monitor_enabled">文件监控</string>
+    <string name="file_monitor_disabled">文件监控已关闭</string>
+    <string name="file_monitor_action_update">更新</string>
 </resources>

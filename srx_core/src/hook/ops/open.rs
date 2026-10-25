@@ -142,7 +142,7 @@ pub unsafe extern "C" fn hooked_open(pathname: *const c_char, flags: c_int, mode
                 return call_open(pathname, flags, mode);
             }
 
-            if !path_utils::is_relevant_storage_path(hub, &path_text) {
+            if !path_utils::is_relevant_storage_path(&path_text) {
                 diagnostic::record_fast_bypass("open", &path_text);
                 return call_open(pathname, flags, mode);
             }
@@ -153,8 +153,7 @@ pub unsafe extern "C" fn hooked_open(pathname: *const c_char, flags: c_int, mode
             let mut is_redirected = false;
             let mut final_path: Cow<'_, str> = Cow::Borrowed(path_text.as_str());
             // 系统代写进程仅对写入操作重定向，读取探测保持原路径避免触发 MediaProvider 路径校验
-            let should_redirect = !hub.is_monitor_only()
-                && (!is_system_writer || monitor::has_write_intent_flags(flags));
+            let should_redirect = !is_system_writer || monitor::has_write_intent_flags(flags);
             if should_redirect {
                 let redirect_result = process_redirect_path(hub, &path_text);
                 diagnostic::log_diag_redirect_decision(hub, "open", &path_text, &redirect_result);
@@ -202,7 +201,6 @@ pub unsafe extern "C" fn hooked_open(pathname: *const c_char, flags: c_int, mode
                 );
             }
 
-            monitor::record_open_result(hub, "open", flags, final_path.as_ref(), result, error_no);
             result
         },
     )
@@ -295,13 +293,13 @@ where
         if resolved.is_empty() {
             return call_original(dirfd, pathname);
         }
-        if !path_utils::is_relevant_storage_path(hub, &resolved) {
+        if !path_utils::is_relevant_storage_path(&resolved) {
             return call_original(dirfd, pathname);
         }
         path_for_decision = Cow::Owned(resolved);
     }
 
-    if !path_utils::is_relevant_storage_path(hub, path_for_decision.as_ref()) {
+    if !path_utils::is_relevant_storage_path(path_for_decision.as_ref()) {
         diagnostic::record_fast_bypass(op_name, path_for_decision.as_ref());
         return call_original(dirfd, pathname);
     }
@@ -314,8 +312,7 @@ where
     let mut should_call_with_absolute = false;
 
     // 系统代写进程仅对写入操作重定向，读取探测保持原路径避免触发 MediaProvider 路径校验
-    let should_redirect =
-        !hub.is_monitor_only() && (!is_system_writer || monitor::has_write_intent_flags(flags));
+    let should_redirect = !is_system_writer || monitor::has_write_intent_flags(flags);
     if should_redirect {
         let redirect_result = process_redirect_path(hub, path_for_decision.as_ref());
         diagnostic::log_diag_redirect_decision(
@@ -389,13 +386,6 @@ where
         );
     }
 
-    let record_path = if is_relative {
-        path_for_decision.as_ref()
-    } else {
-        final_path.as_ref()
-    };
-    monitor::record_open_result(hub, op_name, flags, record_path, result, error_no);
-
     if !call_path.is_null() && call_path != pathname {
         unsafe {
             let _ = CString::from_raw(call_path as *mut c_char);
@@ -442,35 +432,23 @@ pub unsafe extern "C" fn hooked_creat(pathname: *const c_char, mode: mode_t) -> 
                 return call_creat(pathname, mode);
             }
 
-            if !path_utils::is_relevant_storage_path(hub, &path_text) {
+            if !path_utils::is_relevant_storage_path(&path_text) {
                 return call_creat(pathname, mode);
             }
 
             diagnostic::log_diag_path_event(hub, "creat", "input", &path_text, creat_flags);
 
             let mut final_path: Cow<'_, str> = Cow::Borrowed(path_text.as_str());
-            if !hub.is_monitor_only() {
-                let redirect_result = process_redirect_path(hub, &path_text);
-                if redirect_result.is_redirect() {
-                    final_path = Cow::Owned(redirect_result.new_path);
-                }
+            let redirect_result = process_redirect_path(hub, &path_text);
+            if redirect_result.is_redirect() {
+                final_path = Cow::Owned(redirect_result.new_path);
             }
 
-            let result = if let Ok(c_path) = CString::new(final_path.as_ref()) {
+            if let Ok(c_path) = CString::new(final_path.as_ref()) {
                 call_creat(c_path.as_ptr(), mode)
             } else {
                 call_creat(pathname, mode)
-            };
-            let error_no = if result < 0 { *libc::__errno() } else { 0 };
-            monitor::record_open_result(
-                hub,
-                "creat",
-                creat_flags,
-                final_path.as_ref(),
-                result,
-                error_no,
-            );
-            result
+            }
         },
     )
 }

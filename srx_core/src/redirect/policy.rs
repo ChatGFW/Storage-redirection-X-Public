@@ -134,15 +134,6 @@ pub fn get_uid_for_package(package_name: &str) -> i32 {
         .unwrap_or(-1)
 }
 
-// 格式: "pkg1,pkg2,pkg3"
-pub fn get_shared_uid_packages_string(uid: i32) -> String {
-    let packages = get_packages_for_uid(uid);
-    if packages.len() < 2 {
-        return String::new();
-    }
-    packages.join(",")
-}
-
 pub fn is_shared_uid_process(uid: i32) -> bool {
     if uid < 0 {
         return false;

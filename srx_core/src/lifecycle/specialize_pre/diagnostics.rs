@@ -2,12 +2,22 @@ use crate::domain::PathMapping;
 use crate::java_hook;
 use crate::redirect::policy;
 
-pub(super) fn install_java_hook(env: *mut jni_sys::JNIEnv) {
+pub(super) fn install_java_hook(
+    env: *mut jni_sys::JNIEnv,
+    is_query_enabled: bool,
+    should_install_monitor: bool,
+    is_monitor_enabled: bool,
+) {
     if !java_hook::is_available() {
         log::info!("java hook skip: hooker dex unavailable");
         return;
     }
-    if java_hook::init_once(env) {
+    if java_hook::init_once(
+        env,
+        is_query_enabled,
+        should_install_monitor,
+        is_monitor_enabled,
+    ) {
         log::info!("java hook init ok");
     } else {
         log::warn!("java hook init failed");

@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.storage.redirect.x.BuildConfig
 import com.storage.redirect.x.R
+import com.storage.redirect.x.data.repository.ConfigRepository
 import com.storage.redirect.x.data.cache.AppPreferences
 import com.storage.redirect.x.data.cache.PreferenceKeys
 import com.storage.redirect.x.util.BackupRestoreNotifier
@@ -62,6 +63,11 @@ fun SettingsPage(
     LaunchedEffect(settingsViewModel) {
         settingsViewModel.events.collect { event ->
             when (event) {
+                SettingsUiEvent.SaveFailed -> Toast.makeText(
+                    context,
+                    resources.getString(R.string.file_monitor_save_failed),
+                    Toast.LENGTH_SHORT,
+                ).show()
                 is SettingsUiEvent.BackupFinished -> {
                     val result = event.result
                     val message = if (result.isSuccess) {
@@ -202,6 +208,35 @@ private fun SettingsPageMiuix(
                 )
             }
 
+            Spacer(Modifier.height(PAGE_GROUP_GAP))
+
+            SmallTitle(text = stringResource(R.string.file_monitor_title))
+            Card(modifier = Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
+                SwitchPreference(
+                    title = stringResource(R.string.file_monitor_enabled),
+                    checked = uiState.isFileMonitorEnabled,
+                    enabled = canOperateRoot,
+                    onCheckedChange = settingsViewModel::setFileMonitorEnabled,
+                )
+                OverlayDropdownPreference(
+                    title = stringResource(R.string.file_monitor_retention),
+                    items = listOf(
+                        stringResource(R.string.file_monitor_keep_hour),
+                        stringResource(R.string.file_monitor_keep_six_hours),
+                        stringResource(R.string.file_monitor_keep_day),
+                        stringResource(R.string.file_monitor_keep_three_days),
+                        stringResource(R.string.file_monitor_keep_week),
+                        stringResource(R.string.file_monitor_keep_month),
+                        stringResource(R.string.file_monitor_keep_forever),
+                    ),
+                    selectedIndex = ConfigRepository.MONITOR_RETENTION_OPTIONS
+                        .indexOf(uiState.fileMonitorRetentionSeconds).coerceAtLeast(0),
+                    enabled = canOperateRoot,
+                    onSelectedIndexChange = {
+                        settingsViewModel.setFileMonitorRetention(ConfigRepository.MONITOR_RETENTION_OPTIONS[it])
+                    },
+                )
+            }
             Spacer(Modifier.height(PAGE_GROUP_GAP))
 
             SmallTitle(text = stringResource(R.string.settings_tools))

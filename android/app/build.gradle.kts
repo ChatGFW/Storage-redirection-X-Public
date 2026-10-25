@@ -32,6 +32,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    sourceSets.getByName("test").java.directories.add("../../srx_core/java_src")
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     androidResources {
         generateLocaleConfig = true
         localeFilters += listOf("en", "zh")
@@ -102,6 +107,11 @@ dependencies {
     implementation(libs.hiddenapibypass)
 
     testImplementation(libs.junit4)
+    testImplementation(libs.robolectric)
+}
+
+tasks.withType<Test>().configureEach {
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
 // navigationevent 1.1.2 会丢失预测返回手势进度，固定到已修复的 1.2，正式版发布后移除

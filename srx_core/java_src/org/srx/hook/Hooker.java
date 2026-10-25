@@ -20,6 +20,9 @@ public class Hooker {
   private static int FILTER_LOG_COUNT;
   private static int INSTALL_LOG_COUNT;
 
+  private static boolean shouldInstallMonitorHooks;
+  public static native void refreshProviderLibraries();
+
   public Method backup;
   private Member target;
 
@@ -44,6 +47,8 @@ public class Hooker {
 
   // ContentProvider.attachInfo 的 hook 回调：记录真实 provider，再按原路径安装 query hook
   public Object attachInfoCallback(Object[] args) throws Throwable {
+    if (shouldInstallMonitorHooks && args[0] instanceof android.content.ContentProvider)
+      FileMonitorHooks.installOn((android.content.ContentProvider) args[0]);
     Object result = callBackup(args);
     if (QUERY_HOOK_PENDING && args.length >= 1 && args[0] != null) {
       Class<?> clazz = args[0].getClass();
@@ -77,23 +82,39 @@ public class Hooker {
   public boolean unhook() { return target != null && doUnhook(target); }
 
   // Try already loaded MediaProvider classes first, then keep attachInfo as a fallback.
-  public static boolean installMediaProviderHook() {
+  public static boolean installMediaProviderHook(
+      boolean isQueryEnabled, boolean shouldInstallMonitor, boolean isMonitorEnabled) {
+    QUERY_HOOK_PENDING = isQueryEnabled;
+    shouldInstallMonitorHooks = shouldInstallMonitor;
+    FileMonitorHooks.setInitialEnabled(isMonitorEnabled);
     logInstallInfo("java hook install begin process=" + currentProcessName() +
                    " pid=" + android.os.Process.myPid() +
                    " uid=" + android.os.Process.myUid());
-    boolean directHooked = tryDirectProviderHook();
+    boolean directHooked = isQueryEnabled && tryDirectProviderHook();
     boolean attachHooked = installAttachInfoHook();
-    return directHooked || attachHooked;
+    return attachHooked || (directHooked && !shouldInstallMonitor);
+  }
+
+  public static synchronized boolean installCallback(
+      Method method, Hooker hooker, String callbackName) throws ReflectiveOperationException {
+    Method callback = hooker.getClass().getDeclaredMethod(callbackName, Object[].class);
+    callback.setAccessible(true);
+    Method backup = hooker.doHook(method, callback);
+    if (backup == null) {
+      logInstallWarn("method hook failed " + describeMethod(method));
+      return false;
+    }
+    backup.setAccessible(true);
+    hooker.backup = backup;
+    hooker.target = method;
+    HOOKS.add(hooker);
+    return true;
   }
 
   private static boolean installAttachInfoHook() {
     try {
       Class<?> cpClass = Class.forName("android.content.ContentProvider");
       Method attachInfo = findAttachInfo(cpClass);
-      if (attachInfo == null) {
-        logInstallWarn("java hook attachInfo method missing");
-        return false;
-      }
       Method callback =
           Hooker.class.getDeclaredMethod("attachInfoCallback", Object[].class);
       callback.setAccessible(true);
@@ -115,18 +136,10 @@ public class Hooker {
     }
   }
 
-  private static Method findAttachInfo(Class<?> cpClass) {
-    for (Method m : cpClass.getDeclaredMethods()) {
-      if (!"attachInfo".equals(m.getName()))
-        continue;
-      Class<?>[] params = m.getParameterTypes();
-      if (params.length == 2 &&
-          "android.content.Context".equals(params[0].getName()) &&
-          "android.content.pm.ProviderInfo".equals(params[1].getName())) {
-        return m;
-      }
-    }
-    return null;
+  private static Method findAttachInfo(Class<?> cpClass) throws NoSuchMethodException {
+    // 两参数入口可能被内联，必须挂接真正执行初始化的重载。
+    return cpClass.getDeclaredMethod("attachInfo", android.content.Context.class,
+        android.content.pm.ProviderInfo.class, boolean.class);
   }
 
   private static synchronized boolean tryInstallQueryHook(Class<?> clazz) {

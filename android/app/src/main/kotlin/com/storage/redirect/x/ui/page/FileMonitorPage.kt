@@ -68,6 +68,8 @@ import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SearchBar
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -109,7 +111,7 @@ fun FileMonitorPage(
 
     LaunchedEffect(entries) {
         val unresolvedPackages = entries
-            .map { it.subjectPackage }
+            .map { it.actorIdentity }
             .filter { it.isNotBlank() && it != "-" }
             .distinct()
             .filter { !appNames.containsKey(it) || !appIcons.containsKey(it) }
@@ -137,25 +139,22 @@ fun FileMonitorPage(
         }
     }
 
-    // 搜索支持：包名、应用名、路径
-    val filteredEntries = remember(entries, searchQuery, appNames.toMap()) {
-        if (searchQuery.isBlank()) {
-            entries
-        } else {
-            entries.filter { entry ->
-                val subjectPkg = entry.subjectPackage
-                val appName = appNames[subjectPkg] ?: ""
-                entry.subjectPackage.contains(searchQuery, ignoreCase = true) ||
-                    entry.packageName.contains(searchQuery, ignoreCase = true) ||
-                    entry.path.contains(searchQuery, ignoreCase = true) ||
-                    appName.contains(searchQuery, ignoreCase = true)
-            }
+    val actionTypes = listOf(MonitorActionType.OPEN, MonitorActionType.CREATE, MonitorActionType.UPDATE,
+        MonitorActionType.DELETE, MonitorActionType.RENAME)
+    val filterLabels = listOf(stringResource(R.string.monitor_all)) + actionTypes.map { monitorActionLabel(it) }
+
+    // 搜索与操作类型同时生效，未命中时仍可继续加载历史记录。
+    val filteredEntries = remember(entries, searchQuery, uiState.opTypeIndex, appNames.toMap()) {
+        entries.filter { entry ->
+            (uiState.opTypeIndex == 0 || entry.actionType == actionTypes[uiState.opTypeIndex - 1]) &&
+                (searchQuery.isBlank() || listOf(entry.actorIdentity, entry.packageName, entry.path,
+                    appNames[entry.actorIdentity].orEmpty()).any { it.contains(searchQuery, ignoreCase = true) })
         }
     }
 
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
     // 有记录时搜索栏随顶栏固定，列表从两者下方滑过
-    val isSearchVisible = !isLoading && entries.isNotEmpty()
+    val isSearchVisible = entries.isNotEmpty() || searchQuery.isNotBlank()
     SrxScaffold(
         modifier = Modifier.testTag("page_monitor"),
         topBar = {
@@ -163,7 +162,7 @@ fun FileMonitorPage(
                 SrxTopAppBar(
                     title = stringResource(R.string.file_monitor_title),
                     actions = {
-                        IconButton(onClick = { monitorViewModel.refresh() }) {
+                        IconButton(onClick = { monitorViewModel.refresh() }, enabled = !isLoading) {
                             Icon(AppIcons.Refresh, contentDescription = stringResource(R.string.file_monitor_refresh))
                         }
                     },
@@ -186,54 +185,88 @@ fun FileMonitorPage(
                             onExpandedChange = {},
                             modifier = Modifier.fillMaxWidth(),
                         ) {}
+                        OverlayDropdownPreference(
+                            title = stringResource(R.string.apps_filter),
+                            items = filterLabels,
+                            selectedIndex = uiState.opTypeIndex,
+                            onSelectedIndexChange = monitorViewModel::updateOpTypeIndex,
+                        )
                     }
                 }
             }
         },
     ) { innerPadding ->
         val topPadding = innerPadding.calculateTopPadding()
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(top = topPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+            contentPadding = PaddingValues(
+                start = PAGE_HORIZONTAL_PADDING,
+                top = topPadding + PAGE_CONTENT_TOP_PADDING,
+                end = PAGE_HORIZONTAL_PADDING,
+                bottom = PAGE_CONTENT_TOP_PADDING + bottomInnerPadding,
+            ),
+            verticalArrangement = Arrangement.spacedBy(PAGE_ITEM_GAP),
+        ) {
+            item { MonitorStatus(uiState) }
+            if (isLoading && entries.isEmpty()) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+            } else if (filteredEntries.isEmpty() && !uiState.hasLoadError) {
+                item {
+                    Text(stringResource(R.string.file_monitor_empty),
+                        Modifier.padding(vertical = 32.dp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                }
             }
-        } else if (filteredEntries.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(top = topPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.file_monitor_empty),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                )
+            items(filteredEntries, key = { it.sequence }) { entry ->
+                MonitorEntryCard(entry, appNames[entry.actorIdentity] ?: entry.actorIdentity, appIcons[entry.actorIdentity])
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                contentPadding = PaddingValues(
-                    start = PAGE_HORIZONTAL_PADDING,
-                    top = topPadding + PAGE_CONTENT_TOP_PADDING,
-                    end = PAGE_HORIZONTAL_PADDING,
-                    bottom = PAGE_CONTENT_TOP_PADDING + bottomInnerPadding,
-                ),
-                verticalArrangement = Arrangement.spacedBy(PAGE_ITEM_GAP)
-            ) {
-                items(filteredEntries) { entry ->
-                    val subjectPackage = entry.subjectPackage
-                    MonitorEntryCard(
-                        entry = entry,
-                        appName = appNames[subjectPackage] ?: subjectPackage,
-                        appIcon = appIcons[subjectPackage]
-                    )
+            if (uiState.hasMore) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                        if (uiState.isLoadingMore) CircularProgressIndicator(Modifier.size(24.dp))
+                        else TextButton(
+                            text = stringResource(R.string.file_monitor_load_more),
+                            onClick = monitorViewModel::loadMore,
+                            enabled = !isLoading,
+                            modifier = Modifier.testTag("monitor_load_more"),
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+@Composable
+private fun MonitorStatus(state: FileMonitorUiState) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!state.isMonitoringEnabled) Text(stringResource(R.string.file_monitor_disabled))
+        if (state.lostRecords > 0 || state.writeErrors > 0) {
+            Text(stringResource(R.string.file_monitor_gaps, state.lostRecords, state.writeErrors), color = MiuixTheme.colorScheme.error)
+        }
+        if (state.hasLoadError || state.isDaemonStale) {
+            Text(stringResource(if (state.hasLoadError) R.string.file_monitor_load_failed else R.string.file_monitor_daemon_stale),
+                color = MiuixTheme.colorScheme.error)
+        }
+    }
+}
+
+@Composable
+private fun monitorActionLabel(type: MonitorActionType): String = stringResource(when (type) {
+    MonitorActionType.OPEN -> R.string.file_monitor_action_open
+    MonitorActionType.CREATE -> R.string.file_monitor_action_create
+    MonitorActionType.DELETE -> R.string.file_monitor_action_delete
+    MonitorActionType.RENAME -> R.string.file_monitor_action_rename
+    MonitorActionType.UPDATE -> R.string.file_monitor_action_update
+    MonitorActionType.READ -> R.string.file_monitor_action_read
+    MonitorActionType.WRITE -> R.string.file_monitor_action_write
+    MonitorActionType.TRUNCATE -> R.string.file_monitor_action_truncate
+    MonitorActionType.MAP -> R.string.file_monitor_action_map
+    MonitorActionType.SYNC -> R.string.file_monitor_action_sync
+})
 
 // 文件监视条目卡片
 @Composable
@@ -243,12 +276,7 @@ private fun MonitorEntryCard(
     appIcon: Drawable?
 ) {
     val colorScheme = MiuixTheme.colorScheme
-    val actionLabel = when (entry.actionType) {
-        MonitorActionType.OPEN -> stringResource(R.string.file_monitor_action_open)
-        MonitorActionType.CREATE -> stringResource(R.string.file_monitor_action_create)
-        MonitorActionType.DELETE -> stringResource(R.string.file_monitor_action_delete)
-        MonitorActionType.RENAME -> stringResource(R.string.file_monitor_action_rename)
-    }
+    val actionLabel = monitorActionLabel(entry.actionType)
     val sourceLabel = if (entry.isDelegatedBySystemWriter) {
         when (entry.delegatedWriterType) {
             MonitorWriterType.MEDIA -> stringResource(R.string.file_monitor_source_media_action, actionLabel)
@@ -264,7 +292,7 @@ private fun MonitorEntryCard(
         MonitorResultState.SUCCESS -> stringResource(R.string.file_monitor_result_success) to STATUS_SUCCESS_COLOR
         MonitorResultState.FAILED -> stringResource(R.string.file_monitor_result_failed) to colorScheme.error
     }
-    // 路径默认两行，点按卡片展开全文
+    // 路径默认两行，点按卡片展开完整时间与路径。
     var isExpanded by rememberSaveable(entry.timestamp, entry.path) { mutableStateOf(false) }
 
     Card(
@@ -298,7 +326,7 @@ private fun MonitorEntryCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = sourceLabel,
+                text = if (entry.count > 1) stringResource(R.string.file_monitor_repeated, sourceLabel, entry.count) else sourceLabel,
                 fontSize = 14.sp,
                 color = colorScheme.onSurfaceSecondary,
                 maxLines = 1,
@@ -306,6 +334,10 @@ private fun MonitorEntryCard(
                 modifier = Modifier.weight(1f),
             )
             StatusTag(label = resultLabel, color = resultColor, modifier = Modifier.padding(start = FILE_MONITOR_ICON_GAP))
+        }
+        if (isExpanded) {
+            Text(entry.timestamp, modifier = Modifier.padding(top = FILE_MONITOR_PATH_TOP_SPACING),
+                style = MiuixTheme.textStyles.footnote1, color = colorScheme.onSurfaceVariantSummary)
         }
         Text(
             text = entry.displayPath,

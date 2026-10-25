@@ -15,7 +15,6 @@ const LOG_LEVEL_ERROR: i32 = 4;
 
 const CURRENT_LOG_LEVEL: i32 = LOG_LEVEL_DEBUG;
 const DEFAULT_LOG_TAG: &str = "StorageRedirect";
-const FILE_MONITOR_LOG_TAG: &str = "FileMonitorOp";
 const STATS_LOG_TAG: &str = "Stats";
 const PRIVATE_LOG_SOCKET_NAME: &[u8] = b"storage.redirect.x.logd";
 
@@ -315,11 +314,8 @@ fn current_level_filter() -> LevelFilter {
     }
 }
 
-// 默认写入运行日志通道，文件监控与统计单独分流
+// 默认写入运行日志通道，统计单独分流。
 fn resolve_record_tag(target: &str) -> &str {
-    if target == FILE_MONITOR_LOG_TAG {
-        return FILE_MONITOR_LOG_TAG;
-    }
     if target == STATS_LOG_TAG {
         return STATS_LOG_TAG;
     }

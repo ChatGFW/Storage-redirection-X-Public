@@ -124,7 +124,7 @@ where
     let path_for_decision = path_utils::resolve_dirfd_path(fd);
     if path_for_decision.is_empty()
         || !path_for_decision.starts_with('/')
-        || !path_utils::is_relevant_storage_path(hub, &path_for_decision)
+        || !path_utils::is_relevant_storage_path(&path_for_decision)
     {
         return call_original();
     }
@@ -244,7 +244,7 @@ where
     let path_for_decision = path_utils::resolve_dirfd_path(fd);
     if path_for_decision.is_empty()
         || !path_for_decision.starts_with('/')
-        || !path_utils::is_relevant_storage_path(hub, &path_for_decision)
+        || !path_utils::is_relevant_storage_path(&path_for_decision)
     {
         return call_original();
     }

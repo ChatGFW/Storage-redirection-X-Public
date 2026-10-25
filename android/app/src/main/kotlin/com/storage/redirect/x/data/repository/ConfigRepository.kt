@@ -5,10 +5,15 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.storage.redirect.x.data.model.AppRedirectConfig
 import com.storage.redirect.x.data.model.RedirectConfig
+import com.storage.redirect.x.data.service.MonitorService
 import com.storage.redirect.x.data.service.RootService
 import com.storage.redirect.x.util.Logger
 import com.storage.redirect.x.util.Paths
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 private const val FILE_DUMP_MARKER = "@@SRX@@"
@@ -106,10 +111,10 @@ class ConfigRepository {
             true
         }
 
-    suspend fun setFuseFixerEnabled(isEnabled: Boolean): Boolean = withContext(Dispatchers.IO) {
-        val globalConfig = readGlobalConfig()
-        writeGlobalConfig(globalConfig.isFileMonitorEnabled, isEnabled)
-    }
+    suspend fun setFuseFixerEnabled(isEnabled: Boolean): Boolean =
+        withContext(Dispatchers.IO) {
+            writeGlobalConfig(isFuseFixerEnabled = isEnabled)
+        }
 
     suspend fun readFuseFixerEnabled(): Boolean = readGlobalConfig().isFuseFixerEnabled
 
@@ -145,6 +150,22 @@ class ConfigRepository {
         ).isSuccess
     }
 
+    suspend fun readFileMonitorEnabled(): Boolean = readGlobalConfig().isFileMonitorEnabled.also {
+        publishMonitorEnabled(it)
+    }
+
+    suspend fun setFileMonitorEnabled(isEnabled: Boolean): Boolean = withContext(Dispatchers.IO) {
+        writeGlobalConfig(isFileMonitorEnabled = isEnabled)
+    }
+
+    suspend fun readFileMonitorRetention(): Long = readGlobalConfig().fileMonitorRetentionSeconds
+
+    suspend fun setFileMonitorRetention(seconds: Long): Boolean =
+        withContext(Dispatchers.IO) {
+            if (seconds !in MONITOR_RETENTION_OPTIONS) return@withContext false
+            writeGlobalConfig(retentionSeconds = seconds)
+        }
+
     // 读取全局配置，字段缺失时走保守默认
     private suspend fun readGlobalConfig(): GlobalConfig {
         val content = RootService.readFile(Paths.GLOBAL_CONFIG_FILE)
@@ -154,6 +175,9 @@ class ConfigRepository {
             GlobalConfig(
                 isFileMonitorEnabled = json.get("file_monitor_enabled")?.asBoolean ?: true,
                 isFuseFixerEnabled = json.get("fuse_fixer_enabled")?.asBoolean ?: false,
+                fileMonitorRetentionSeconds =
+                    json.get("file_monitor_retention_seconds")?.asLong?.takeIf { it >= 0 }
+                        ?: 604800L,
             )
         } catch (_: Exception) {
             GlobalConfig()
@@ -214,20 +238,45 @@ class ConfigRepository {
     }
 
     // 写入全局配置
-    private suspend fun writeGlobalConfig(isFileMonitorEnabled: Boolean, isFuseFixerEnabled: Boolean): Boolean {
-        if (!ensureConfigDir()) {
-            return false
+    private suspend fun writeGlobalConfig(
+        isFileMonitorEnabled: Boolean? = null,
+        isFuseFixerEnabled: Boolean? = null,
+        retentionSeconds: Long? = null,
+    ): Boolean {
+        return globalWriteMutex.withLock {
+            if (!ensureConfigDir()) {
+                return@withLock false
+            }
+            val existing = RootService.readFile(Paths.GLOBAL_CONFIG_FILE)
+            val globalJson = try {
+                updateGlobalConfig(
+                    existing,
+                    isFileMonitorEnabled,
+                    isFuseFixerEnabled,
+                    retentionSeconds,
+                )
+            } catch (error: RuntimeException) {
+                Logger.error("Parse global config failed", error)
+                return@withLock false
+            }
+            val content = gson.toJson(globalJson) + "\n"
+            val temporary = "${Paths.GLOBAL_CONFIG_FILE}.tmp"
+            val isSaved =
+                RootService.writeFile(temporary, content) &&
+                    RootService.runCommand(
+                            "chmod 644 '$temporary' && mv -f '$temporary' '${Paths.GLOBAL_CONFIG_FILE}'"
+                        )
+                        .isSuccess
+            if (isSaved) {
+                mirrorSharedFile(Paths.SHARED_CONFIG_DIR, Paths.SHARED_GLOBAL_CONFIG_FILE, content)
+                if (isFileMonitorEnabled != null || retentionSeconds != null) {
+                    val isApplied = MonitorService.reloadPolicy()
+                    if (!isApplied) return@withLock false
+                    publishMonitorEnabled(globalJson.get("file_monitor_enabled").asBoolean)
+                }
+            }
+            isSaved
         }
-        val globalJson = JsonObject().apply {
-            addProperty("file_monitor_enabled", isFileMonitorEnabled)
-            addProperty("fuse_fixer_enabled", isFuseFixerEnabled)
-        }
-        val content = gson.toJson(globalJson) + "\n"
-        val isSaved = RootService.writeFile(Paths.GLOBAL_CONFIG_FILE, content)
-        if (isSaved) {
-            mirrorSharedFile(Paths.SHARED_CONFIG_DIR, Paths.SHARED_GLOBAL_CONFIG_FILE, content)
-        }
-        return isSaved
     }
 
     // 确保配置目录存在
@@ -282,19 +331,59 @@ class ConfigRepository {
         return isSaved
     }
 
-    private suspend fun mirrorSharedFile(parentDir: String, path: String, content: String): Boolean {
-        RootService.runCommand("mkdir -p '$parentDir' && chmod 755 '${Paths.SHARED_CONFIG_DIR}' '$parentDir'")
-        val isSaved = RootService.writeFile(path, content)
-        if (isSaved) {
-            RootService.runCommand("chmod 644 '$path' && chcon u:object_r:shell_data_file:s0 '$path' 2>/dev/null")
-        } else {
-            Logger.warn("Mirror shared config failed: $path")
-        }
+    private suspend fun mirrorSharedFile(
+        parentDir: String,
+        path: String,
+        content: String,
+    ): Boolean {
+        RootService.runCommand(
+            "mkdir -p '$parentDir' && chmod 755 '${Paths.SHARED_CONFIG_DIR}' '$parentDir'"
+        )
+        val temporary = "$path.tmp"
+        val isSaved =
+            RootService.writeFile(temporary, content) &&
+                RootService.runCommand(
+                        "chmod 644 '$temporary' && (chcon u:object_r:shell_data_file:s0 '$temporary' 2>/dev/null || true) && mv -f '$temporary' '$path'"
+                    )
+                    .isSuccess
+        if (!isSaved) Logger.warn("Mirror shared config failed: $path")
+
         return isSaved
     }
 
     private data class GlobalConfig(
         val isFileMonitorEnabled: Boolean = true,
         val isFuseFixerEnabled: Boolean = false,
+        val fileMonitorRetentionSeconds: Long = 604800L,
     )
+
+    companion object {
+        private val monitorEnabledState = MutableStateFlow<Boolean?>(null)
+        val monitorEnabled = monitorEnabledState.asStateFlow()
+
+        fun publishMonitorEnabled(isEnabled: Boolean) {
+            monitorEnabledState.value = isEnabled
+        }
+
+        internal fun updateGlobalConfig(
+            existing: String?,
+            isMonitorEnabled: Boolean? = null,
+            isFuseFixerEnabled: Boolean? = null,
+            retentionSeconds: Long? = null,
+        ): JsonObject {
+            val json = if (existing.isNullOrBlank()) JsonObject() else JsonParser.parseString(existing).asJsonObject
+            if (isMonitorEnabled != null || !json.has("file_monitor_enabled")) {
+                json.addProperty("file_monitor_enabled", isMonitorEnabled ?: true)
+            }
+            if (isFuseFixerEnabled != null || !json.has("fuse_fixer_enabled")) {
+                json.addProperty("fuse_fixer_enabled", isFuseFixerEnabled ?: false)
+            }
+            if (retentionSeconds != null) json.addProperty("file_monitor_retention_seconds", retentionSeconds)
+            return json
+        }
+
+        private val globalWriteMutex = Mutex()
+        val MONITOR_RETENTION_OPTIONS =
+            listOf(3600L, 21600L, 86400L, 259200L, 604800L, 2592000L, 0L)
+    }
 }

@@ -8,13 +8,11 @@ use super::RuntimeFlow;
 use crate::config::{SettingsHub, watcher};
 use crate::hook;
 use crate::logging::Logger;
-use crate::monitor::AuditTrail;
 use crate::platform::module_paths;
 use crate::platform::paths::monotonic_ms;
 use crate::platform::{self, fs};
 use crate::redirect::{PathRouter, policy};
 use crate::zygisk::{abi, jni};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use companion::{
     build_companion_request_payload, clear_mount_status_marker, send_companion_request_payload,
@@ -25,8 +23,6 @@ use diagnostics::{
 };
 use perf::{SpecializeMetrics, SpecializePerf, log_specialize_perf};
 use writer_context::{SystemWriterContext, resolve_system_writer_context};
-
-static MONITOR_HOOK_PROCESS_COUNT: AtomicU64 = AtomicU64::new(0);
 
 impl RuntimeFlow {
     // 请求 Zygisk 在 postAppSpecialize 后卸载模块 .so
@@ -213,7 +209,23 @@ impl RuntimeFlow {
             );
         }
 
-        if !self.should_redirect && !self.should_monitor {
+        // DownloadProvider 在部分系统运行于 android.process.media，启动早期 UID 映射可能尚未生成。
+        let is_monitor_provider = policy::is_media_provider_package(&self.package_name)
+            || self.package_name == "com.android.providers.downloads"
+            || nice_name == "android.process.media"
+            || policy::is_shared_uid_process(self.app_uid);
+        let should_install_monitor_bridge = self.app_uid >= 0
+            && self.app_uid < 100000
+            && self.app_uid != 1000
+            && !matches!(
+                self.package_name.as_str(),
+                "android" | "system_server" | "com.android.systemui" | "com.storage.redirect.x"
+            )
+            && is_monitor_provider;
+        if should_install_monitor_bridge {
+            self.should_keep_module_loaded = true;
+        }
+        if !self.should_redirect && !self.should_monitor && !should_install_monitor_bridge {
             if !self.should_keep_module_loaded {
                 // 模块即将 dlclose，post 阶段不再做任何事，避免在转译进程里触碰匿名段
                 self.should_skip_post_work = true;
@@ -223,8 +235,10 @@ impl RuntimeFlow {
             return;
         }
 
-        if policy::is_media_provider_package(&self.package_name)
-            && self.is_system_writer_hook_redirect
+        if is_monitor_provider
+            && (self.is_system_writer_hook_redirect
+                || self.should_monitor
+                || should_install_monitor_bridge)
         {
             log::info!(
                 "java hook requested pkg={} nice={} uid={} pid={} hook_redirect={}",
@@ -234,7 +248,12 @@ impl RuntimeFlow {
                 self.app_pid,
                 self.is_system_writer_hook_redirect
             );
-            install_java_hook(self.env);
+            install_java_hook(
+                self.env,
+                self.is_system_writer_hook_redirect,
+                should_install_monitor_bridge,
+                self.should_monitor,
+            );
         }
 
         if self.should_redirect
@@ -255,8 +274,6 @@ impl RuntimeFlow {
             self.should_redirect,
             self.should_monitor
         );
-
-        self.setup_monitor();
 
         if !self.should_redirect {
             self.log_specialize_exit("monitor_only", is_system_writer, perf_started_ms, &metrics);
@@ -294,42 +311,6 @@ impl RuntimeFlow {
                 log::warn!("config watch fd exempt failed fd={}", inotify_fd);
                 watcher::enable_fallback_poll();
             }
-        }
-    }
-
-    fn setup_monitor(&mut self) {
-        if self.should_monitor {
-            let trail = AuditTrail::instance();
-            trail.set_enabled(true);
-
-            let mut monitor_package = self.package_name.clone();
-            if policy::is_shared_uid_process(self.app_uid) {
-                let shared_uid = policy::get_shared_uid_packages_string(self.app_uid);
-                if !shared_uid.is_empty() {
-                    monitor_package = shared_uid;
-                }
-            }
-            trail.init(&monitor_package, self.app_uid);
-
-            let monitor_fd = trail.get_log_fd();
-            if let Some(api) = self.api.as_ref()
-                && monitor_fd >= 0
-            {
-                if api.exempt_fd(monitor_fd) {
-                    log::info!("monitor log fd exempt fd={}", monitor_fd);
-                } else {
-                    log::warn!("monitor log fd exempt failed fd={}", monitor_fd);
-                }
-            }
-
-            let hook_count = MONITOR_HOOK_PROCESS_COUNT.fetch_add(1, Ordering::Relaxed) + 1;
-            log::info!(
-                "monitor hook procs total={} cur={}",
-                hook_count,
-                self.package_name
-            );
-        } else {
-            AuditTrail::instance().set_enabled(false);
         }
     }
 

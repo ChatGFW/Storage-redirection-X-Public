@@ -6,7 +6,6 @@ pub use binder::capture_binder_caller_uid_if_available;
 
 use super::context;
 use super::stats::InterceptHub;
-use crate::monitor::AuditTrail;
 use binder::{
     is_likely_binder_thread_cached, resolve_caller_pid_by_binder, resolve_caller_uid_by_binder,
 };
@@ -90,7 +89,6 @@ pub fn update_caller_package_for_current_thread(hub: &InterceptHub) {
                     if !pkg.is_empty() {
                         hub.set_current_caller_uid(fuse_uid);
                         hub.set_current_caller_package(&pkg);
-                        AuditTrail::instance().update_caller_package(&pkg);
                         let count = CALLER_FALLBACK_HIT_COUNT.fetch_add(1, Ordering::Relaxed) + 1;
                         if should_log_sample(count) {
                             log::debug!(
@@ -176,7 +174,6 @@ pub fn update_caller_package_for_current_thread(hub: &InterceptHub) {
     if !package_name.is_empty() {
         hub.set_current_caller_uid(caller_uid);
         hub.set_current_caller_package(&package_name);
-        AuditTrail::instance().update_caller_package(&package_name);
         if caller_source != "binder_uid" {
             let count = CALLER_FALLBACK_HIT_COUNT.fetch_add(1, Ordering::Relaxed) + 1;
             if should_log_sample(count) {

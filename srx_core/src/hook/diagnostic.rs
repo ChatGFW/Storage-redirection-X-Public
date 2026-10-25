@@ -46,22 +46,20 @@ pub fn log_diag_path_event(hub: &InterceptHub, op_name: &str, stage: &str, path:
 
     if flags >= 0 {
         log::debug!(
-            "diag path stage={} pkg={} op={} path={} flags=0x{:x} mon={}",
+            "diag path stage={} pkg={} op={} path={} flags=0x{:x}",
             stage,
             hub.get_package_name(),
             op_name,
             path,
             flags,
-            hub.is_monitor_only()
         );
     } else {
         log::debug!(
-            "diag path stage={} pkg={} op={} path={} mon={}",
+            "diag path stage={} pkg={} op={} path={}",
             stage,
             hub.get_package_name(),
             op_name,
             path,
-            hub.is_monitor_only()
         );
     }
 }
@@ -122,7 +120,7 @@ pub fn log_diag_rename_decision(
     }
 
     log::info!(
-        "diag rename pkg={} old={} new={} final_old={} final_new={} mon={}",
+        "diag rename pkg={} old={} new={} final_old={} final_new={}",
         hub.get_package_name(),
         if oldpath.is_empty() {
             "<null>"
@@ -144,7 +142,6 @@ pub fn log_diag_rename_decision(
         } else {
             final_newpath
         },
-        hub.is_monitor_only()
     );
 }
 
@@ -198,7 +195,7 @@ pub fn log_relative_path_bypass(
 
     if flags >= 0 {
         log::info!(
-            "diag rel-bypass pkg={} op={} n={} dirfd={} base={} rel={} resolved={} storage={} flags=0x{:x} mon={}",
+            "diag rel-bypass pkg={} op={} n={} dirfd={} base={} rel={} resolved={} storage={} flags=0x{:x}",
             hub.get_package_name(),
             op_name,
             current,
@@ -216,11 +213,10 @@ pub fn log_relative_path_bypass(
             },
             is_storage,
             flags,
-            hub.is_monitor_only()
         );
     } else {
         log::info!(
-            "diag rel-bypass pkg={} op={} n={} dirfd={} base={} rel={} resolved={} storage={} mon={}",
+            "diag rel-bypass pkg={} op={} n={} dirfd={} base={} rel={} resolved={} storage={}",
             hub.get_package_name(),
             op_name,
             current,
@@ -237,7 +233,6 @@ pub fn log_relative_path_bypass(
                 resolved_path.as_str()
             },
             is_storage,
-            hub.is_monitor_only()
         );
     }
 }

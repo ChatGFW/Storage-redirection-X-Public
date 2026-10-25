@@ -63,11 +63,7 @@ impl RuntimeFlow {
 
         let hook_started_ms = monotonic_ms();
         let is_redirect_via_hook = self.should_redirect && self.is_system_writer_hook_redirect;
-        install_plt_hook(
-            &self.package_name,
-            self.should_monitor,
-            is_redirect_via_hook,
-        );
+        install_plt_hook(&self.package_name, is_redirect_via_hook);
         let hook_ms = monotonic_ms().saturating_sub(hook_started_ms);
 
         let anti_started_ms = monotonic_ms();
@@ -182,10 +178,8 @@ fn log_post_perf(
     );
 }
 
-fn install_plt_hook(package_name: &str, should_monitor: bool, is_redirect_via_hook: bool) {
-    let is_monitor_only = !is_redirect_via_hook;
-    let should_install = should_monitor || is_redirect_via_hook;
-    if !should_install {
+fn install_plt_hook(package_name: &str, is_redirect_via_hook: bool) {
+    if !is_redirect_via_hook {
         log::info!("plt hook skip");
         return;
     }
@@ -195,14 +189,10 @@ fn install_plt_hook(package_name: &str, should_monitor: bool, is_redirect_via_ho
         return;
     }
 
-    log::info!(
-        "plt hook install redirect={} monitor={}",
-        !is_monitor_only,
-        should_monitor
-    );
+    log::info!("plt hook install redirect=true");
 
     let hub = InterceptHub::instance();
-    hub.init(package_name, is_monitor_only, should_monitor);
+    hub.init(package_name);
     if hub.install() {
         log::info!("plt hook ok");
     } else {

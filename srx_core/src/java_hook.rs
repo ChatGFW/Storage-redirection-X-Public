@@ -20,18 +20,33 @@ pub fn is_available() -> bool {
 }
 
 // 在目标进程内初始化一次；成功后 hooker_class() 返回全局引用
-pub fn init_once(env: *mut JNIEnv) -> bool {
+pub fn init_once(
+    env: *mut JNIEnv,
+    is_query_enabled: bool,
+    should_install_monitor: bool,
+    is_monitor_enabled: bool,
+) -> bool {
     if IS_INITIALIZED.load(Ordering::Acquire) {
         return true;
     }
-    if !init(env) {
+    if !init(
+        env,
+        is_query_enabled,
+        should_install_monitor,
+        is_monitor_enabled,
+    ) {
         return false;
     }
     IS_INITIALIZED.store(true, Ordering::Release);
     true
 }
 
-fn init(env: *mut JNIEnv) -> bool {
+fn init(
+    env: *mut JNIEnv,
+    is_query_enabled: bool,
+    should_install_monitor: bool,
+    is_monitor_enabled: bool,
+) -> bool {
     if HOOKER_DEX.is_empty() || env.is_null() {
         return false;
     }
@@ -45,7 +60,13 @@ fn init(env: *mut JNIEnv) -> bool {
         delete_local_ref(env, clazz);
         return false;
     }
-    let install_ok = install_media_provider_hook(env, clazz);
+    let install_ok = install_media_provider_hook(
+        env,
+        clazz,
+        is_query_enabled,
+        should_install_monitor,
+        is_monitor_enabled,
+    );
     if !install_ok {
         log::warn!("java hook install media provider hook failed");
     }
@@ -53,12 +74,33 @@ fn init(env: *mut JNIEnv) -> bool {
     install_ok
 }
 
-fn install_media_provider_hook(env: *mut JNIEnv, clazz: jni_sys::jclass) -> bool {
-    let method = get_static_method_id(env, clazz, "installMediaProviderHook", "()Z");
+fn install_media_provider_hook(
+    env: *mut JNIEnv,
+    clazz: jni_sys::jclass,
+    is_query_enabled: bool,
+    should_install_monitor: bool,
+    is_monitor_enabled: bool,
+) -> bool {
+    let method = get_static_method_id(env, clazz, "installMediaProviderHook", "(ZZZ)Z");
     if method.is_null() {
         return false;
     }
-    call_static_boolean_method_a(env, clazz, method, &[])
+    call_static_boolean_method_a(
+        env,
+        clazz,
+        method,
+        &[
+            jni_sys::jvalue {
+                z: is_query_enabled,
+            },
+            jni_sys::jvalue {
+                z: should_install_monitor,
+            },
+            jni_sys::jvalue {
+                z: is_monitor_enabled,
+            },
+        ],
+    )
 }
 
 #[allow(unused_imports)]

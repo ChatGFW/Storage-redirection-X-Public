@@ -14,7 +14,6 @@ object Paths {
     const val APPS_CONFIG_BACKUP_FILE = "$BACKUP_DIR/apps_config_backup.json"
     const val LOGS_DIR = "$MODULE_DIR/logs"
     const val RUNNING_LOG = "$LOGS_DIR/running.log"
-    const val FILE_MONITOR_LOG = "$LOGS_DIR/file_monitor.log"
     const val MEDIA_PROVIDER_STATE_LOG = "$LOGS_DIR/media_provider_state.log"
     const val APP_STATUS_LOG = "$LOGS_DIR/app_status.log"
     const val GLOBAL_STATS_FILE = "/data/local/tmp/storage.redirect.x_stats"

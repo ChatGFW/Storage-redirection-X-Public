@@ -31,8 +31,8 @@ pub unsafe extern "C" fn hooked_rename(oldpath: *const c_char, newpath: *const c
 
             let old_text = c_str_to_string(oldpath);
             let new_text = c_str_to_string(newpath);
-            let is_old_storage = path_utils::is_relevant_storage_path(hub, &old_text);
-            let is_new_storage = path_utils::is_relevant_storage_path(hub, &new_text);
+            let is_old_storage = path_utils::is_relevant_storage_path(&old_text);
+            let is_new_storage = path_utils::is_relevant_storage_path(&new_text);
             if !is_old_storage && !is_new_storage {
                 diagnostic::record_fast_bypass("rename", &old_text);
                 return call_rename(oldpath, newpath);
@@ -41,7 +41,6 @@ pub unsafe extern "C" fn hooked_rename(oldpath: *const c_char, newpath: *const c
             diagnostic::log_diag_path_event(hub, "rename", "input-old", &old_text, -1);
             diagnostic::log_diag_path_event(hub, "rename", "input-new", &new_text, -1);
 
-            let is_monitor_only = hub.is_monitor_only();
             let mut old_redirect = RedirectDecision {
                 action: RedirectAction::Allow,
                 new_path: String::new(),
@@ -50,13 +49,11 @@ pub unsafe extern "C" fn hooked_rename(oldpath: *const c_char, newpath: *const c
                 action: RedirectAction::Allow,
                 new_path: String::new(),
             };
-            if !is_monitor_only {
-                if is_old_storage {
-                    old_redirect = process_redirect_path(hub, &old_text);
-                }
-                if is_new_storage {
-                    new_redirect = process_redirect_path(hub, &new_text);
-                }
+            if is_old_storage {
+                old_redirect = process_redirect_path(hub, &old_text);
+            }
+            if is_new_storage {
+                new_redirect = process_redirect_path(hub, &new_text);
             }
 
             let final_old = if old_redirect.is_redirect() {
@@ -71,7 +68,7 @@ pub unsafe extern "C" fn hooked_rename(oldpath: *const c_char, newpath: *const c
             };
 
             diagnostic::log_diag_rename_decision(hub, &old_text, &new_text, final_old, final_new);
-            if !is_monitor_only && (final_old != old_text || final_new != new_text) {
+            if final_old != old_text || final_new != new_text {
                 log::trace!(
                     "rename: {} -> {} (redirect {} -> {})",
                     old_text,
@@ -168,8 +165,8 @@ pub unsafe extern "C" fn hooked_renameat2(
                 return call_original(oldpath, newpath);
             }
 
-            let is_old_storage = path_utils::is_relevant_storage_path(hub, &old_text);
-            let is_new_storage = path_utils::is_relevant_storage_path(hub, &new_text);
+            let is_old_storage = path_utils::is_relevant_storage_path(&old_text);
+            let is_new_storage = path_utils::is_relevant_storage_path(&new_text);
             if !is_old_storage && !is_new_storage {
                 diagnostic::record_fast_bypass("renameat2", &old_text);
                 return call_original(oldpath, newpath);
@@ -178,7 +175,6 @@ pub unsafe extern "C" fn hooked_renameat2(
             diagnostic::log_diag_path_event(hub, "renameat2", "input-old", &old_text, flags as i32);
             diagnostic::log_diag_path_event(hub, "renameat2", "input-new", &new_text, flags as i32);
 
-            let is_monitor_only = hub.is_monitor_only();
             let mut old_redirect = RedirectDecision {
                 action: RedirectAction::Allow,
                 new_path: String::new(),
@@ -187,13 +183,11 @@ pub unsafe extern "C" fn hooked_renameat2(
                 action: RedirectAction::Allow,
                 new_path: String::new(),
             };
-            if !is_monitor_only {
-                if is_old_storage {
-                    old_redirect = process_redirect_path(hub, &old_text);
-                }
-                if is_new_storage {
-                    new_redirect = process_redirect_path(hub, &new_text);
-                }
+            if is_old_storage {
+                old_redirect = process_redirect_path(hub, &old_text);
+            }
+            if is_new_storage {
+                new_redirect = process_redirect_path(hub, &new_text);
             }
 
             let final_old = if old_redirect.is_redirect() {
@@ -208,7 +202,7 @@ pub unsafe extern "C" fn hooked_renameat2(
             };
 
             diagnostic::log_diag_rename_decision(hub, &old_text, &new_text, final_old, final_new);
-            if !is_monitor_only && (final_old != old_text || final_new != new_text) {
+            if final_old != old_text || final_new != new_text {
                 hub.increment_total_redirected();
                 hub.increment_global_redirect_count();
             }

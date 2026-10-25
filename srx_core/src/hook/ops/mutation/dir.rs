@@ -1,12 +1,10 @@
 use crate::hook::diagnostic;
-use crate::hook::monitor;
 use crate::hook::path as path_utils;
 use crate::hook::runtime;
 use crate::hook::stats::InterceptHub;
 use crate::hook::util::c_str_to_string;
 use crate::redirect::{process_redirect_path, record_redirect_hit};
 use libc::{AT_FDCWD, c_char, c_int, c_void, mode_t};
-use std::borrow::Cow;
 use std::ffi::CString;
 
 pub unsafe extern "C" fn hooked_mkdir(pathname: *const c_char, mode: mode_t) -> c_int {
@@ -171,18 +169,7 @@ where
 
     diagnostic::log_diag_path_event(hub, op_name, "input", &path_text, mode as i32);
 
-    if hub.is_monitor_only() {
-        let result = call_original(pathname);
-        let error_no = if result < 0 {
-            unsafe { *libc::__errno() }
-        } else {
-            0
-        };
-        monitor::record_mkdir_result(hub, op_name, &path_text, result, error_no);
-        return result;
-    }
-
-    if !path_utils::is_relevant_storage_path(hub, &path_text) {
+    if !path_utils::is_relevant_storage_path(&path_text) {
         diagnostic::record_fast_bypass(op_name, &path_text);
         return call_original(pathname);
     }
@@ -190,26 +177,17 @@ where
     let redirect_result = process_redirect_path(hub, &path_text);
     diagnostic::log_diag_redirect_decision(hub, op_name, &path_text, &redirect_result);
 
-    let mut final_path: Cow<'_, str> = Cow::Borrowed(path_text.as_str());
-    let result = if redirect_result.is_redirect() {
+    if redirect_result.is_redirect() {
         record_redirect_hit(hub, op_name, &path_text, &redirect_result.new_path);
         runtime::ensure_redirect_parent_dirs(&redirect_result.new_path, mode);
         if let Ok(c_path) = CString::new(redirect_result.new_path.as_str()) {
-            final_path = Cow::Owned(redirect_result.new_path);
             call_original(c_path.as_ptr())
         } else {
             call_original(pathname)
         }
     } else {
         call_original(pathname)
-    };
-    let error_no = if result < 0 {
-        unsafe { *libc::__errno() }
-    } else {
-        0
-    };
-    monitor::record_mkdir_result(hub, op_name, final_path.as_ref(), result, error_no);
-    result
+    }
 }
 
 fn handle_unlink_like<F>(
@@ -236,16 +214,7 @@ where
 
     diagnostic::log_diag_path_event(hub, op_name, "input", &path_text, flags);
 
-    if hub.is_monitor_only() {
-        let result = call_original(pathname);
-        let current_errno = unsafe { *libc::__errno() };
-        if should_preserve_errno {
-            unsafe { *libc::__errno() = current_errno };
-        }
-        return result;
-    }
-
-    if !path_utils::is_relevant_storage_path(hub, &path_text) {
+    if !path_utils::is_relevant_storage_path(&path_text) {
         diagnostic::record_fast_bypass(op_name, &path_text);
         return call_original(pathname);
     }

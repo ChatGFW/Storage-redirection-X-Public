@@ -12,7 +12,7 @@ internal fun Context.runMonitorRecentCommand(extras: Bundle?): Bundle = runDebug
     val entries = runBlocking { FileMonitorRepository().loadEntries(limit) }
         ?: return@runDebugCommand debugResult(
             isOk = false,
-            message = "Monitor log unavailable (root required)",
+            message = "Monitor database unavailable (root and running monitor service required)",
             command = METHOD_MONITOR_RECENT,
         )
 

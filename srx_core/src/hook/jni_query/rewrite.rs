@@ -47,9 +47,6 @@ fn rewrite_cursor_storage_path_with_mode(
     can_hide_rows: bool,
 ) -> Option<String> {
     let hub = InterceptHub::instance();
-    if hub.is_monitor_only() {
-        return None;
-    }
     rewrite_cursor_storage_path_inner(original_text, can_hide_rows, |path_text| {
         process_redirect_path(hub, path_text)
     })

@@ -109,7 +109,7 @@ where
 }
 
 pub fn should_resolve_caller_context(hub: &InterceptHub) -> bool {
-    hub.is_monitor_enabled() || policy::is_system_writer_package(&hub.get_package_name())
+    policy::is_system_writer_package(&hub.get_package_name())
 }
 
 // 写入类重定向时按需补齐目标父目录
@@ -172,7 +172,7 @@ where
         caller::update_caller_package_for_current_thread(hub);
     }
 
-    if pathname.is_null() || hub.is_monitor_only() {
+    if pathname.is_null() {
         return call_original(pathname);
     }
 
@@ -181,7 +181,7 @@ where
         return call_original(pathname);
     }
 
-    if !path_utils::is_relevant_storage_path(hub, &path_text) {
+    if !path_utils::is_relevant_storage_path(&path_text) {
         diagnostic::record_fast_bypass(op_name, &path_text);
         return call_original(pathname);
     }
