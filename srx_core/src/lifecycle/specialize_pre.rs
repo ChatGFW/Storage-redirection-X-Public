@@ -437,6 +437,7 @@ impl RuntimeFlow {
             &self.app_data_dir,
             &redirect_base,
             &allowed_real_paths,
+            &excluded_real_paths,
             &path_mappings,
             is_mapping_mode_only,
         );

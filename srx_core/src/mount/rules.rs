@@ -1,0 +1,130 @@
+use super::MountPlanner;
+use crate::platform::{fs, paths};
+use std::fs as std_fs;
+
+pub(super) const REAL_PATH_WILDCARD_EXPAND_LIMIT: usize = 512;
+
+impl MountPlanner {
+    pub(super) fn expand_real_path_wildcard(
+        rule_path: &str,
+        storage_path: &str,
+        real_base_path: &str,
+    ) -> Vec<String> {
+        let Some(mut relative) = rule_path.strip_prefix(storage_path) else {
+            return Vec::new();
+        };
+        if let Some(stripped) = relative.strip_prefix('/') {
+            relative = stripped;
+        }
+        if relative.is_empty() {
+            return Vec::new();
+        }
+
+        let segments: Vec<&str> = relative
+            .split('/')
+            .filter(|segment| !segment.is_empty())
+            .collect();
+        if segments.is_empty() {
+            return Vec::new();
+        }
+
+        let mut expanded = Vec::new();
+        Self::expand_real_path_segments(
+            real_base_path,
+            storage_path,
+            &segments,
+            0,
+            &mut expanded,
+        );
+        expanded.sort();
+        expanded.dedup();
+        expanded
+    }
+
+    fn expand_real_path_segments(
+        real_current: &str,
+        storage_current: &str,
+        segments: &[&str],
+        index: usize,
+        expanded: &mut Vec<String>,
+    ) {
+        if expanded.len() >= REAL_PATH_WILDCARD_EXPAND_LIMIT {
+            return;
+        }
+
+        if index >= segments.len() {
+            if fs::is_directory(real_current) {
+                expanded.push(storage_current.to_string());
+            }
+            return;
+        }
+
+        let segment = segments[index];
+        if has_path_wildcard(segment) {
+            let Ok(entries) = std_fs::read_dir(real_current) else {
+                return;
+            };
+            for entry in entries.flatten() {
+                if expanded.len() >= REAL_PATH_WILDCARD_EXPAND_LIMIT {
+                    return;
+                }
+                let Ok(file_type) = entry.file_type() else {
+                    continue;
+                };
+                if !file_type.is_dir() || file_type.is_symlink() {
+                    continue;
+                }
+
+                let name = entry.file_name().to_string_lossy().to_string();
+                if !paths::matches(segment, &name, false) {
+                    continue;
+                }
+
+                let real_next = paths::join(real_current, &name);
+                let storage_next = paths::join(storage_current, &name);
+                Self::expand_real_path_segments(
+                    &real_next,
+                    &storage_next,
+                    segments,
+                    index + 1,
+                    expanded,
+                );
+            }
+            return;
+        }
+
+        let real_next = paths::join(real_current, segment);
+        if !fs::is_directory(&real_next) {
+            return;
+        }
+        let storage_next = paths::join(storage_current, segment);
+        Self::expand_real_path_segments(
+            &real_next,
+            &storage_next,
+            segments,
+            index + 1,
+            expanded,
+        );
+    }
+}
+
+pub(super) fn reduce_real_path_rules(rules: Vec<String>) -> Vec<String> {
+    let mut effective: Vec<String> = Vec::with_capacity(rules.len());
+    for rule in rules {
+        let mut is_redundant = false;
+        for kept in &effective {
+            if paths::matches(kept, &rule, true) {
+                is_redundant = true;
+                break;
+            }
+        }
+        if !is_redundant {
+            effective.push(rule);
+        }
+    }
+    effective
+}
+
+pub(super) fn has_path_wildcard(path: &str) -> bool {
+    path.contains('*') || path.contains('?')
+}

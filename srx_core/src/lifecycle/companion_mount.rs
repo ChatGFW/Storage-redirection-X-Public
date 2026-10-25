@@ -393,7 +393,11 @@ fn handle_child_process(request: &CompanionMountRequest, sock: c_int) -> bool {
         log::info!("map-only mount count={}", request.path_mappings.len());
         mount_mgr.apply_path_mappings_only(&request.path_mappings)
     } else {
-        mount_mgr.apply_sdcard_redirect(&request.allowed_real_paths, &request.path_mappings)
+        mount_mgr.apply_sdcard_redirect(
+            &request.allowed_real_paths,
+            &request.excluded_real_paths,
+            &request.path_mappings,
+        )
     };
 
     let result = if is_success { 0 } else { -1 };

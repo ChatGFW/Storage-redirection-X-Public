@@ -8,6 +8,7 @@ pub struct CompanionMountRequest {
     pub app_data_dir: String,
     pub redirect_target: String,
     pub allowed_real_paths: Vec<String>,
+    pub excluded_real_paths: Vec<String>,
     pub path_mappings: Vec<PathMapping>,
     pub is_mapping_mode_only: bool,
 }
@@ -40,7 +41,8 @@ pub fn parse_companion_mount_request(payload: &str) -> Result<CompanionMountRequ
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
 
-    request.allowed_real_paths = parse_allowed_real_paths(value.get("allowed_real_paths"));
+    request.allowed_real_paths = parse_real_paths(value.get("allowed_real_paths"));
+    request.excluded_real_paths = parse_real_paths(value.get("excluded_real_paths"));
     request.path_mappings = parse_path_mappings(value.get("path_mappings"));
 
     if request.pid <= 0 || request.uid < 0 || request.package_name.is_empty() {
@@ -53,8 +55,8 @@ pub fn parse_companion_mount_request(payload: &str) -> Result<CompanionMountRequ
     Ok(request)
 }
 
-// 从 JSON 数组提取允许路径列表
-fn parse_allowed_real_paths(value: Option<&serde_json::Value>) -> Vec<String> {
+// 从 JSON 数组提取真实路径规则
+fn parse_real_paths(value: Option<&serde_json::Value>) -> Vec<String> {
     let Some(value) = value else {
         return Vec::new();
     };

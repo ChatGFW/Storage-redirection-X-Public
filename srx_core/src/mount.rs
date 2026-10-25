@@ -2,7 +2,9 @@ use crate::platform::{self, paths};
 mod alias;
 mod apply;
 mod core;
+mod exclusions;
 mod map;
+mod rules;
 
 pub struct MountPlanner {
     should_unshare: bool,

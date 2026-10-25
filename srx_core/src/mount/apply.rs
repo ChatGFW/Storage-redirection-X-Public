@@ -1,14 +1,13 @@
 use super::MountPlanner;
+use super::rules::{REAL_PATH_WILDCARD_EXPAND_LIMIT, has_path_wildcard, reduce_real_path_rules};
 use crate::domain::PathMapping;
 use crate::platform::{fs, module_paths, paths};
-use std::fs as std_fs;
-
-const ALLOW_WILDCARD_EXPAND_LIMIT: usize = 512;
 
 impl MountPlanner {
     pub fn apply_sdcard_redirect(
         &mut self,
         allowed_real_paths: &[String],
+        excluded_real_paths: &[String],
         path_mappings: &[PathMapping],
     ) -> bool {
         let resolved_target_storage =
@@ -30,11 +29,12 @@ impl MountPlanner {
         log::info!("redirect target={}", resolved_target_storage);
         log::debug!("redirect backend={}", resolved_target);
         log::info!(
-            "mount args pkg={} uid={} user={} allow={} map={}",
+            "mount args pkg={} uid={} user={} allow={} excl={} map={}",
             self.package_name,
             self.app_uid,
             self.user_id,
             allowed_real_paths.len(),
+            excluded_real_paths.len(),
             path_mappings.len()
         );
 
@@ -141,6 +141,7 @@ impl MountPlanner {
             return false;
         }
 
+        let mut restored_real_paths = vec![android_path];
         if !allowed_real_paths.is_empty() {
             let real_base_path = if is_real_storage_anchor_ready {
                 real_storage_anchor
@@ -172,22 +173,22 @@ impl MountPlanner {
             resolved_paths.sort();
             resolved_paths.dedup();
 
-            let effective_rules = reduce_allowed_real_path_rules(resolved_paths);
+            let effective_rules = reduce_real_path_rules(resolved_paths);
             let mut effective_paths: Vec<String> = Vec::with_capacity(effective_rules.len());
             for rule in effective_rules {
-                if has_allowed_path_wildcard(&rule) {
-                    let expanded = Self::expand_allowed_real_path_wildcard(
+                if has_path_wildcard(&rule) {
+                    let expanded = Self::expand_real_path_wildcard(
                         &rule,
                         &storage_path,
                         &real_base_path,
                     );
                     if expanded.is_empty() {
                         log::warn!("allow wildcard no match: {}", rule);
-                    } else if expanded.len() >= ALLOW_WILDCARD_EXPAND_LIMIT {
+                    } else if expanded.len() >= REAL_PATH_WILDCARD_EXPAND_LIMIT {
                         log::warn!(
                             "allow wildcard limit path={} limit={}",
                             rule,
-                            ALLOW_WILDCARD_EXPAND_LIMIT
+                            REAL_PATH_WILDCARD_EXPAND_LIMIT
                         );
                     }
                     effective_paths.extend(expanded);
@@ -236,8 +237,19 @@ impl MountPlanner {
                 );
                 if is_restored_allowed_path {
                     log::info!("allow restored {}", allowed_path);
+                    restored_real_paths.push(allowed_path);
                 }
             }
+        }
+
+        // 排除覆盖恢复的真实目录，显式映射随后覆盖排除，保持与路径路由一致。
+        if !self.apply_excluded_real_paths(
+            excluded_real_paths,
+            &restored_real_paths,
+            &storage_path,
+            &resolved_target,
+        ) {
+            return false;
         }
 
         if !path_mappings.is_empty() {
@@ -261,108 +273,6 @@ impl MountPlanner {
 
         log::info!("redirect done");
         true
-    }
-
-    fn expand_allowed_real_path_wildcard(
-        rule_path: &str,
-        storage_path: &str,
-        real_base_path: &str,
-    ) -> Vec<String> {
-        let Some(mut relative) = rule_path.strip_prefix(storage_path) else {
-            return Vec::new();
-        };
-        if let Some(stripped) = relative.strip_prefix('/') {
-            relative = stripped;
-        }
-        if relative.is_empty() {
-            return Vec::new();
-        }
-
-        let segments: Vec<&str> = relative
-            .split('/')
-            .filter(|segment| !segment.is_empty())
-            .collect();
-        if segments.is_empty() {
-            return Vec::new();
-        }
-
-        let mut expanded = Vec::new();
-        Self::expand_allowed_real_path_segments(
-            real_base_path,
-            storage_path,
-            &segments,
-            0,
-            &mut expanded,
-        );
-        expanded.sort();
-        expanded.dedup();
-        expanded
-    }
-
-    fn expand_allowed_real_path_segments(
-        real_current: &str,
-        storage_current: &str,
-        segments: &[&str],
-        index: usize,
-        expanded: &mut Vec<String>,
-    ) {
-        if expanded.len() >= ALLOW_WILDCARD_EXPAND_LIMIT {
-            return;
-        }
-
-        if index >= segments.len() {
-            if fs::is_directory(real_current) {
-                expanded.push(storage_current.to_string());
-            }
-            return;
-        }
-
-        let segment = segments[index];
-        if has_allowed_path_wildcard(segment) {
-            let Ok(entries) = std_fs::read_dir(real_current) else {
-                return;
-            };
-            for entry in entries.flatten() {
-                if expanded.len() >= ALLOW_WILDCARD_EXPAND_LIMIT {
-                    return;
-                }
-                let Ok(file_type) = entry.file_type() else {
-                    continue;
-                };
-                if !file_type.is_dir() || file_type.is_symlink() {
-                    continue;
-                }
-
-                let name = entry.file_name().to_string_lossy().to_string();
-                if !paths::matches(segment, &name, false) {
-                    continue;
-                }
-
-                let real_next = paths::join(real_current, &name);
-                let storage_next = paths::join(storage_current, &name);
-                Self::expand_allowed_real_path_segments(
-                    &real_next,
-                    &storage_next,
-                    segments,
-                    index + 1,
-                    expanded,
-                );
-            }
-            return;
-        }
-
-        let real_next = paths::join(real_current, segment);
-        if !fs::is_directory(&real_next) {
-            return;
-        }
-        let storage_next = paths::join(storage_current, segment);
-        Self::expand_allowed_real_path_segments(
-            &real_next,
-            &storage_next,
-            segments,
-            index + 1,
-            expanded,
-        );
     }
 
     pub fn apply_path_mappings_only(&mut self, path_mappings: &[PathMapping]) -> bool {
@@ -408,25 +318,4 @@ impl MountPlanner {
 
         true
     }
-}
-
-fn reduce_allowed_real_path_rules(rules: Vec<String>) -> Vec<String> {
-    let mut effective: Vec<String> = Vec::with_capacity(rules.len());
-    for rule in rules {
-        let mut is_redundant = false;
-        for kept in &effective {
-            if paths::matches(kept, &rule, true) {
-                is_redundant = true;
-                break;
-            }
-        }
-        if !is_redundant {
-            effective.push(rule);
-        }
-    }
-    effective
-}
-
-fn has_allowed_path_wildcard(path: &str) -> bool {
-    path.contains('*') || path.contains('?')
 }
