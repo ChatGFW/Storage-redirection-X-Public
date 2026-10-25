@@ -15,7 +15,16 @@ Create an atomic commit promptly after each independently working requirement pa
 4. Stage explicit paths with `git add -- <path>`. To stop tracking an authorized file, confirm its absolute path and use `git rm --cached -- <path>` so its local copy remains intact. Never use broad staging commands.
 5. Review `git diff --cached --check` and the complete `git diff --cached`. Confirm scope, required build inputs, license notices, and actual verification results before committing. Do not commit incomplete work or claim failed checks passed.
 6. Review the message against the rules below, then execute `git commit`. Apply the same review before `--amend`.
-7. Verify the saved message with `git log -1 --format=%B` and inspect `git status --short --branch`. Report the commit ID, scope, verification, and remaining worktree changes.
+7. Verify the saved message with `git log -1 --format=%B` and inspect `git status --short --branch`.
+8. Complete the Rust formatting phase below before finishing. If the worktree was already clean at entry, skip creating a task commit and start that phase directly. Report all commit IDs, scopes, verification results, and remaining worktree changes.
+
+## Rust Formatting
+
+1. Start only with a clean index and worktree. If uncommitted changes exist, verify and commit the authorized changes first, following the workflow above; do not run even a formatting check before those commits. Preserve unrelated or unfinished changes and defer formatting until they are resolved. Do not stash, reset, or absorb them merely to obtain a clean worktree.
+2. Run `cargo fmt --all --check`. If it passes, no formatting commit is needed. If it reports formatting differences, run `cargo fmt --all`. Diagnose tool or parsing failures instead of treating them as formatting differences.
+3. Review the complete diff and confirm it contains only formatter-generated Rust changes. Run `cargo fmt --all --check` again and `cargo clippy --manifest-path srx_core/Cargo.toml --target aarch64-linux-android -- -D warnings`.
+4. Stage only the explicit formatted paths, review `git diff --cached --check` and `git diff --cached`, and create one separate commit such as `chore: Format Rust sources`. Never mix formatting with functional changes or amend it into the preceding task commit.
+5. Verify the saved commit and clean worktree. This formatting-only commit completes the phase; do not recursively start another formatting phase for it.
 
 ## Commit Message
 
