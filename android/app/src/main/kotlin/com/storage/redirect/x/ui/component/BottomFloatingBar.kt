@@ -14,7 +14,10 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
@@ -22,6 +25,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
+import com.storage.redirect.x.ui.theme.rememberInteractionFeedback
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.FloatingToolbar
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -81,14 +85,16 @@ fun PillButton(
     enabled: Boolean = true,
     colors: TextButtonColors = ButtonDefaults.textButtonColors(),
 ) {
-    TextButton(
-        text = text,
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        cornerRadius = FLOATING_BAR_ITEM_HEIGHT / 2,
-        minHeight = FLOATING_BAR_ITEM_HEIGHT,
-        colors = colors,
-        insideMargin = PaddingValues(horizontal = FLOATING_BAR_BUTTON_HORIZONTAL_PADDING),
-    )
+    CompositionLocalProvider(LocalIndication provides rememberInteractionFeedback(CircleShape)) {
+        TextButton(
+            text = text,
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            cornerRadius = FLOATING_BAR_ITEM_HEIGHT / 2,
+            minHeight = FLOATING_BAR_ITEM_HEIGHT,
+            colors = colors,
+            insideMargin = PaddingValues(horizontal = FLOATING_BAR_BUTTON_HORIZONTAL_PADDING),
+        )
+    }
 }

@@ -1,12 +1,20 @@
 package com.storage.redirect.x.ui.page
 
-import android.annotation.SuppressLint
 import android.os.Build
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
+import com.storage.redirect.x.ui.theme.rememberInteractionFeedback
+import com.storage.redirect.x.ui.theme.isInDarkTheme
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,16 +22,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.captionBar
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -36,7 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
@@ -44,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
-import com.materialkolor.rememberDynamicColorScheme
 import com.storage.redirect.x.R
 import com.storage.redirect.x.data.cache.AppPreferences
 import com.storage.redirect.x.data.cache.PreferenceKeys
@@ -63,7 +66,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Slider
-import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.preference.ArrowPreference
@@ -82,7 +84,6 @@ fun ColorPalettePageMiuix(
 ) {
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
     val colorMode = themeSettings.colorMode
-    val isDark = colorMode.isDark || colorMode.isSystem && isSystemInDarkTheme()
     val activity = LocalActivity.current
     var isPredictiveBackEnabled by remember {
         mutableStateOf(AppPreferences.getBoolean(PreferenceKeys.PREDICTIVE_BACK_ENABLED))
@@ -107,30 +108,10 @@ fun ColorPalettePageMiuix(
             contentPadding = innerPadding,
         ) {
             item {
-                Spacer(modifier = Modifier.height(32.dp))
-                ThemePreviewCardMiuix(
-                    keyColor = themeSettings.keyColor,
-                    isDark = isDark,
-                    miuixMonet = themeSettings.miuixMonet,
-                    enableFloatingBottomBar = bottomBarAppearance.isFloatingBottomBarEnabled,
-                    isBottomBarBlurEnabled = bottomBarAppearance.isBottomBarBlurEnabled,
-                    paletteStyle = themeSettings.paletteStyle,
-                    colorSpec = themeSettings.colorSpec,
-                )
-                Spacer(modifier = Modifier.height(72.dp))
-
-                val themeItems = listOf(
-                    stringResource(R.string.theme_system),
-                    stringResource(R.string.theme_light),
-                    stringResource(R.string.theme_dark),
-                )
-                TabRow(
-                    tabs = themeItems,
-                    selectedTabIndex = colorMode.toBaseThemeIndex(),
-                    onTabSelected = { index ->
-                        onThemeSettingsChange(themeSettings.copy(colorMode = baseColorModeForIndex(index)))
-                    },
-                    height = 48.dp,
+                Spacer(Modifier.height(PAGE_CONTENT_TOP_PADDING))
+                ThemeModeSelector(
+                    colorMode = colorMode,
+                    onSelect = { onThemeSettingsChange(themeSettings.copy(colorMode = it)) },
                 )
 
                 Card(
@@ -386,187 +367,51 @@ internal fun themeColorNames(): List<String> = listOf(
     stringResource(R.string.color_sakura),
 )
 
-@SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
-private fun ThemePreviewCardMiuix(
-    keyColor: Int,
-    isDark: Boolean,
-    miuixMonet: Boolean,
-    enableFloatingBottomBar: Boolean = false,
-    isBottomBarBlurEnabled: Boolean = false,
-    paletteStyle: PaletteStyle = PaletteStyle.TonalSpot,
-    colorSpec: ColorSpec.SpecVersion = ColorSpec.SpecVersion.Default,
-) {
-    val configuration = LocalConfiguration.current
-    val screenRatio = configuration.screenWidthDp.toFloat() / configuration.screenHeightDp.toFloat()
-
-    val seedColor = if (keyColor == 0) colorScheme.primary else Color(keyColor)
-    val effectiveStyle = if (keyColor == 0) PaletteStyle.TonalSpot else paletteStyle
-    val effectiveSpec = if (keyColor == 0) ColorSpec.SpecVersion.Default else colorSpec
-    val dynamicCs = rememberDynamicColorScheme(
-        seedColor = seedColor,
-        isDark = isDark,
-        style = effectiveStyle,
-        specVersion = effectiveSpec,
+private fun ThemeModeSelector(colorMode: ColorMode, onSelect: (ColorMode) -> Unit) {
+    val labels = listOf(
+        stringResource(R.string.theme_system),
+        stringResource(R.string.theme_light),
+        stringResource(R.string.theme_dark),
     )
-
-    val bgColor = if (miuixMonet) dynamicCs.background else colorScheme.surface
-    val textColor = if (miuixMonet) dynamicCs.onSurface else colorScheme.onBackground
-    val accentCardColor = when {
-        miuixMonet -> dynamicCs.secondaryContainer
-        isDark -> Color(0xFF1A3825)
-        else -> Color(0xFFDFFAE4)
-    }
-    val cardColor = if (miuixMonet) dynamicCs.surfaceContainerHighest else colorScheme.surfaceVariant
-    val navBarColor = if (miuixMonet) dynamicCs.surfaceContainer else colorScheme.surface
-    val iconColor = if (miuixMonet) dynamicCs.primary else colorScheme.primary
-    val navSelectedColor = colorScheme.onSurfaceContainer
-    val navUnselectedColor = colorScheme.onSurfaceContainer.copy(alpha = 0.5f)
-
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.TopCenter,
+    val feedback = rememberInteractionFeedback(CircleShape)
+    val selectedColor = if (isInDarkTheme(colorMode)) colorScheme.secondaryVariant else colorScheme.surfaceContainer
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(CircleShape)
+            .background(colorScheme.surfaceContainerHigh)
+            .padding(4.dp)
+            .selectableGroup()
+            .testTag("theme_mode_selector"),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.4f)
-                .aspectRatio(screenRatio)
-                .clip(RoundedCornerShape(20.dp))
-                .background(bgColor)
-                .border(1.dp, colorScheme.outline, RoundedCornerShape(20.dp)),
-        ) {
-            Column {
-                Row(
-                    modifier = Modifier
-                        .height(48.dp)
-                        .fillMaxWidth()
-                        .padding(start = 12.dp, top = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        fontSize = 12.sp,
-                        color = textColor,
+        labels.forEachIndexed { index, label ->
+            val isSelected = colorMode.toBaseThemeIndex() == index
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 44.dp)
+                    .clip(CircleShape)
+                    .background(if (isSelected) selectedColor else Color.Transparent)
+                    .selectable(
+                        selected = isSelected,
+                        role = Role.Tab,
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = feedback,
+                        onClick = { onSelect(baseColorModeForIndex(index)) },
                     )
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(65.dp)
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(accentCardColor),
-                    )
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        repeat(2) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(cardColor),
-                            )
-                        }
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(0.8f)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(cardColor),
-                    )
-                    repeat(2) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(0.1f)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(cardColor),
-                        )
-                    }
-                }
-            }
-
-            if (enableFloatingBottomBar) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 8.dp),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .height(28.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(
-                                if (isBottomBarBlurEnabled) navBarColor.copy(alpha = 0.5f)
-                                else navBarColor,
-                            )
-                            .border(0.5.dp, textColor.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
-                            .padding(horizontal = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        repeat(4) { index ->
-                            Box(
-                                modifier = Modifier
-                                    .size(13.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(if (index == 0) iconColor else textColor),
-                            )
-                        }
-                    }
-                }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth(),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(0.5.dp)
-                            .background(textColor.copy(alpha = 0.1f)),
-                    )
-                    Row(
-                        modifier = Modifier
-                            .height(36.dp)
-                            .fillMaxWidth()
-                            .background(navBarColor)
-                            .padding(top = 2.dp, bottom = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        repeat(4) { index ->
-                            Box(
-                                modifier = Modifier
-                                    .size(15.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(if (index == 0) navSelectedColor else navUnselectedColor),
-                            )
-                        }
-                    }
-                }
+                    .padding(horizontal = 8.dp, vertical = 10.dp)
+                    .testTag("theme_mode_$index"),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = label,
+                    color = if (isSelected) colorScheme.onSurface else colorScheme.onSurfaceVariantSummary,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    textAlign = TextAlign.Center,
+                    fontSize = 15.sp,
+                )
             }
         }
     }

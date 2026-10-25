@@ -351,4 +351,19 @@
     <string name="file_monitor_enabled">文件监控</string>
     <string name="file_monitor_disabled">文件监控已关闭</string>
     <string name="file_monitor_action_update">更新</string>
+    <string name="common_clear_filters">清除筛选</string>
+    <string name="empty_templates_summary">把常用规则保存为模板，方便应用到其他应用。</string>
+    <string name="apps_no_match">没有找到相关应用</string>
+    <string name="apps_no_match_summary">试试其他关键词，或清除搜索条件。</string>
+    <string name="empty_apps_summary">当前列表没有可显示的应用，可以刷新列表或调整筛选。</string>
+    <string name="empty_logs_summary">模块产生运行日志后，会显示在这里。</string>
+    <string name="logs_load_failed">运行日志加载失败</string>
+    <string name="logs_load_failed_summary">无法阅读运行日志，请检查模块状态后重试。</string>
+    <string name="logs_no_match_summary">试试其他关键词，或清除搜索条件。</string>
+    <string name="empty_monitor_summary">应用访问共享存储后，记录会显示在这里。</string>
+    <string name="monitor_no_match">没有符合条件的记录</string>
+    <string name="monitor_no_match_summary">调整筛选条件，或继续加载历史记录。</string>
+    <string name="monitor_disabled_summary">在设置中开启文件监视后，可以查看应用的文件访问记录。</string>
+    <string name="monitor_load_failed_summary">无法获取监视记录，请检查模块状态后重试。</string>
+    <string name="monitor_filter_description">筛选：%1$s</string>
 </resources>

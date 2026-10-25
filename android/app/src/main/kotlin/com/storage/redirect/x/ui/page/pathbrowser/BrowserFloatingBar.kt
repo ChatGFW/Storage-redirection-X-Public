@@ -87,7 +87,6 @@ private fun MultiSelectActions(state: PathBrowserState, onConfirm: () -> Unit) {
 
 @Composable
 private fun SingleSelectActions(state: PathBrowserState, onConfirm: () -> Unit) {
-    val colors = browserColors()
     Row(
         Modifier
             .height(FLOATING_BAR_ITEM_HEIGHT)
@@ -96,7 +95,7 @@ private fun SingleSelectActions(state: PathBrowserState, onConfirm: () -> Unit) 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(AppIcons.FolderOpen, null, Modifier.size(BAR_FOLDER_ICON_SIZE), tint = colors.folder)
+        Icon(AppIcons.FolderOpen, null, Modifier.size(BAR_FOLDER_ICON_SIZE), tint = state.accentColor())
         BrowserText(
             state.currentName.ifEmpty { rootLabel(state) },
             fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1,

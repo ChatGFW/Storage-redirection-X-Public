@@ -45,10 +45,18 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.storage.redirect.x.R
+import top.yukonga.miuix.kmp.basic.DropdownDefaults
+import top.yukonga.miuix.kmp.basic.DropdownImpl
+import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
+import top.yukonga.miuix.kmp.overlay.OverlayListPopup
+import com.storage.redirect.x.ui.component.TOP_BAR_POPUP_POSITION_PROVIDER
 import com.storage.redirect.x.data.model.FileMonitorEntry
 import com.storage.redirect.x.data.model.MonitorActionType
 import com.storage.redirect.x.data.model.MonitorResultState
 import com.storage.redirect.x.data.model.MonitorWriterType
+import com.storage.redirect.x.ui.component.PageMessageState
+import com.storage.redirect.x.ui.component.PillButton
 import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
@@ -63,13 +71,11 @@ import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
+import com.storage.redirect.x.ui.component.SrxIconButton as IconButton
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SearchBar
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -154,7 +160,7 @@ fun FileMonitorPage(
 
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
     // 有记录时搜索栏随顶栏固定，列表从两者下方滑过
-    val isSearchVisible = entries.isNotEmpty() || searchQuery.isNotBlank()
+    val isSearchVisible = entries.isNotEmpty() || searchQuery.isNotBlank() || uiState.opTypeIndex != 0
     SrxScaffold(
         modifier = Modifier.testTag("page_monitor"),
         topBar = {
@@ -179,24 +185,60 @@ fun FileMonitorPage(
                                     onSearch = {},
                                     expanded = false,
                                     onExpandedChange = {},
-                                    label = stringResource(R.string.file_monitor_search_hint)
+                                    label = stringResource(R.string.file_monitor_search_hint),
+                                    trailingIcon = {
+                                        Row(
+                                            modifier = Modifier.padding(end = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            if (searchQuery.isNotEmpty()) {
+                                                IconButton(onClick = { monitorViewModel.updateSearchQuery("") }) {
+                                                    Icon(AppIcons.Close, contentDescription = stringResource(R.string.browser_clear_search))
+                                                }
+                                            }
+                                            MonitorFilterButton(
+                                                labels = filterLabels,
+                                                selectedIndex = uiState.opTypeIndex,
+                                                onSelect = monitorViewModel::updateOpTypeIndex,
+                                            )
+                                        }
+                                    },
                                 )
                             },
                             onExpandedChange = {},
                             modifier = Modifier.fillMaxWidth(),
                         ) {}
-                        OverlayDropdownPreference(
-                            title = stringResource(R.string.apps_filter),
-                            items = filterLabels,
-                            selectedIndex = uiState.opTypeIndex,
-                            onSelectedIndexChange = monitorViewModel::updateOpTypeIndex,
-                        )
                     }
                 }
             }
         },
     ) { innerPadding ->
         val topPadding = innerPadding.calculateTopPadding()
+        if (filteredEntries.isEmpty()) {
+            Column(
+                Modifier.fillMaxSize()
+                    .padding(top = topPadding, bottom = bottomInnerPadding)
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
+                Box(Modifier.padding(horizontal = PAGE_HORIZONTAL_PADDING)) {
+                    MonitorStatus(uiState, isEmpty = true)
+                }
+                if (isLoading) {
+                    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    MonitorEmptyState(
+                        state = uiState,
+                        modifier = Modifier.weight(1f),
+                        onRetry = monitorViewModel::refresh,
+                        onClearFilters = monitorViewModel::resetFilters,
+                    )
+                }
+                if (uiState.hasMore) MonitorLoadMore(uiState, monitorViewModel::loadMore)
+            }
+            return@SrxScaffold
+        }
         LazyColumn(
             modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding = PaddingValues(
@@ -208,32 +250,50 @@ fun FileMonitorPage(
             verticalArrangement = Arrangement.spacedBy(PAGE_ITEM_GAP),
         ) {
             item { MonitorStatus(uiState) }
-            if (isLoading && entries.isEmpty()) {
-                item {
-                    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-            } else if (filteredEntries.isEmpty() && !uiState.hasLoadError) {
-                item {
-                    Text(stringResource(R.string.file_monitor_empty),
-                        Modifier.padding(vertical = 32.dp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                }
-            }
             items(filteredEntries, key = { it.sequence }) { entry ->
                 MonitorEntryCard(entry, appNames[entry.actorIdentity] ?: entry.actorIdentity, appIcons[entry.actorIdentity])
             }
             if (uiState.hasMore) {
-                item {
-                    Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
-                        if (uiState.isLoadingMore) CircularProgressIndicator(Modifier.size(24.dp))
-                        else TextButton(
-                            text = stringResource(R.string.file_monitor_load_more),
-                            onClick = monitorViewModel::loadMore,
-                            enabled = !isLoading,
-                            modifier = Modifier.testTag("monitor_load_more"),
-                        )
-                    }
+                item { MonitorLoadMore(uiState, monitorViewModel::loadMore) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonitorFilterButton(labels: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+    var isExpanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(
+            onClick = { isExpanded = true },
+            modifier = Modifier.testTag("monitor_filter_button"),
+            holdDownState = isExpanded,
+        ) {
+            Icon(
+                imageVector = AppIcons.Filter,
+                contentDescription = stringResource(R.string.monitor_filter_description, labels[selectedIndex]),
+                tint = if (selectedIndex == 0) MiuixTheme.colorScheme.onSurfaceVariantSummary else MiuixTheme.colorScheme.primary,
+            )
+        }
+        OverlayListPopup(
+            show = isExpanded,
+            popupPositionProvider = TOP_BAR_POPUP_POSITION_PROVIDER,
+            alignment = PopupPositionProvider.Align.TopEnd,
+            onDismissRequest = { isExpanded = false },
+        ) {
+            ListPopupColumn {
+                labels.forEachIndexed { index, label ->
+                    DropdownImpl(
+                        text = label,
+                        optionSize = labels.size,
+                        isSelected = index == selectedIndex,
+                        index = index,
+                        dropdownColors = DropdownDefaults.dropdownColors(),
+                        onSelectedIndexChange = {
+                            onSelect(it)
+                            isExpanded = false
+                        },
+                    )
                 }
             }
         }
@@ -241,14 +301,68 @@ fun FileMonitorPage(
 }
 
 @Composable
-private fun MonitorStatus(state: FileMonitorUiState) {
+private fun MonitorEmptyState(
+    state: FileMonitorUiState,
+    modifier: Modifier,
+    onRetry: () -> Unit,
+    onClearFilters: () -> Unit,
+) {
+    val hasFilter = state.searchQuery.isNotBlank() || state.opTypeIndex != 0
+    PageMessageState(
+        modifier = modifier.testTag("monitor_empty_state"),
+        icon = when {
+            state.hasLoadError -> AppIcons.Warning
+            hasFilter -> AppIcons.Search
+            else -> AppIcons.FileMonitor
+        },
+        title = stringResource(when {
+            state.hasLoadError -> R.string.file_monitor_load_failed
+            hasFilter -> R.string.monitor_no_match
+            !state.isMonitoringEnabled -> R.string.file_monitor_disabled
+            else -> R.string.file_monitor_empty
+        }),
+        message = stringResource(when {
+            state.hasLoadError -> R.string.monitor_load_failed_summary
+            hasFilter -> R.string.monitor_no_match_summary
+            !state.isMonitoringEnabled -> R.string.monitor_disabled_summary
+            else -> R.string.empty_monitor_summary
+        }),
+        action = if (state.hasLoadError || hasFilter) {
+            {
+                PillButton(
+                    text = stringResource(if (state.hasLoadError) R.string.common_retry else R.string.common_clear_filters),
+                    onClick = if (state.hasLoadError) onRetry else onClearFilters,
+                )
+            }
+        } else null,
+    )
+}
+
+@Composable
+private fun MonitorLoadMore(state: FileMonitorUiState, onLoadMore: () -> Unit) {
+    Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+        if (state.isLoadingMore) {
+            CircularProgressIndicator(Modifier.size(24.dp))
+        } else {
+            PillButton(
+                text = stringResource(R.string.file_monitor_load_more),
+                onClick = onLoadMore,
+                enabled = !state.isLoading,
+                modifier = Modifier.testTag("monitor_load_more"),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MonitorStatus(state: FileMonitorUiState, isEmpty: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (!state.isMonitoringEnabled) Text(stringResource(R.string.file_monitor_disabled))
+        if (!isEmpty && !state.isMonitoringEnabled) Text(stringResource(R.string.file_monitor_disabled))
         if (state.lostRecords > 0 || state.writeErrors > 0) {
             Text(stringResource(R.string.file_monitor_gaps, state.lostRecords, state.writeErrors), color = MiuixTheme.colorScheme.error)
         }
-        if (state.hasLoadError || state.isDaemonStale) {
-            Text(stringResource(if (state.hasLoadError) R.string.file_monitor_load_failed else R.string.file_monitor_daemon_stale),
+        if ((!isEmpty && state.hasLoadError) || state.isDaemonStale) {
+            Text(stringResource(if (!isEmpty && state.hasLoadError) R.string.file_monitor_load_failed else R.string.file_monitor_daemon_stale),
                 color = MiuixTheme.colorScheme.error)
         }
     }

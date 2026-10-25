@@ -23,7 +23,7 @@ import com.storage.redirect.x.R
 import com.storage.redirect.x.data.model.RedirectTemplate
 import com.storage.redirect.x.ui.icon.AppIcons
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
+import com.storage.redirect.x.ui.component.SrxIconButton as IconButton
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField

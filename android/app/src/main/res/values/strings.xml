@@ -362,4 +362,19 @@
     <string name="file_monitor_enabled">File monitoring</string>
     <string name="file_monitor_disabled">Monitoring stopped</string>
     <string name="file_monitor_action_update">update</string>
+    <string name="common_clear_filters">Clear filters</string>
+    <string name="empty_templates_summary">Save common rules as templates to reuse them for other apps.</string>
+    <string name="apps_no_match">No matching apps</string>
+    <string name="apps_no_match_summary">Try another keyword or clear the search.</string>
+    <string name="empty_apps_summary">There are no apps in this list. Refresh or adjust the filters.</string>
+    <string name="empty_logs_summary">Runtime logs will appear here when the module produces them.</string>
+    <string name="logs_load_failed">Could not load logs</string>
+    <string name="logs_load_failed_summary">The runtime log could not be read. Check the module status and try again.</string>
+    <string name="logs_no_match_summary">Try another keyword or clear the search.</string>
+    <string name="empty_monitor_summary">Records will appear here when apps access shared storage.</string>
+    <string name="monitor_no_match">No matching records</string>
+    <string name="monitor_no_match_summary">Adjust the filters or load more history.</string>
+    <string name="monitor_disabled_summary">Enable file monitoring in settings to view app file access records.</string>
+    <string name="monitor_load_failed_summary">Monitoring records could not be loaded. Check the module status and try again.</string>
+    <string name="monitor_filter_description">Filter: %1$s</string>
 </resources>

@@ -1,6 +1,8 @@
 package com.storage.redirect.x.ui.page.pathbrowser
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,7 +25,7 @@ import com.storage.redirect.x.BuildConfig
 import com.storage.redirect.x.R
 import com.storage.redirect.x.ui.icon.AppIcons
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
+import com.storage.redirect.x.ui.component.SrxIconButton as IconButton
 import top.yukonga.miuix.kmp.window.WindowDialog
 
 // 已选清单：点条目跳到该目录，× 移出选择
@@ -71,7 +73,7 @@ private fun BrowserSelectedPaths(state: PathBrowserState) {
         items(state.selectedPaths.toList(), key = { it }) { path ->
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(
-                    Modifier.weight(1f).clickable {
+                    Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable {
                         state.isSelectionDialogVisible = false
                         state.navigateTo(path)
                     }.padding(vertical = 10.dp),

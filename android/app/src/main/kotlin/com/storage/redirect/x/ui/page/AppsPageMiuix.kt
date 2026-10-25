@@ -52,6 +52,7 @@ import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
 import com.storage.redirect.x.ui.component.PillButton
+import com.storage.redirect.x.ui.component.PageMessageState
 import com.storage.redirect.x.ui.component.STATUS_WARNING_COLOR
 import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.component.SrxSmallTopAppBar
@@ -67,7 +68,7 @@ import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
+import com.storage.redirect.x.ui.component.SrxIconButton as IconButton
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -217,15 +218,19 @@ private fun AppList(
         ) {
             if (data.filteredApps.isEmpty()) {
                 item(key = "empty") {
-                    Box(
-                        modifier = Modifier.fillParentMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.apps_no_apps),
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
-                    }
+                    val hasQuery = data.searchQuery.isNotBlank()
+                    PageMessageState(
+                        icon = if (hasQuery) AppIcons.Search else AppIcons.Grid,
+                        title = stringResource(if (hasQuery) R.string.apps_no_match else R.string.apps_no_apps),
+                        message = stringResource(if (hasQuery) R.string.apps_no_match_summary else R.string.empty_apps_summary),
+                        modifier = Modifier.fillParentMaxSize().testTag("apps_empty_state"),
+                        action = {
+                            PillButton(
+                                text = stringResource(if (hasQuery) R.string.browser_clear_search else R.string.apps_refresh),
+                                onClick = { if (hasQuery) actions.onSearchChange("") else actions.onRefresh() },
+                            )
+                        },
+                    )
                 }
                 return@LazyColumn
             }

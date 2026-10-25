@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,13 +40,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.storage.redirect.x.R
 import com.storage.redirect.x.ui.icon.AppIcons
 import com.storage.redirect.x.data.repository.LogRepository
 import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
 import com.storage.redirect.x.ui.component.PAGE_ITEM_GAP
+import com.storage.redirect.x.ui.component.PageMessageState
+import com.storage.redirect.x.ui.component.PillButton
 import com.storage.redirect.x.ui.component.SrxBackButton
 import com.storage.redirect.x.ui.component.SrxScaffold
 import com.storage.redirect.x.ui.component.SrxTopAppBar
@@ -57,7 +57,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
+import com.storage.redirect.x.ui.component.SrxIconButton as IconButton
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -85,6 +85,7 @@ fun LogsPage(onBack: () -> Unit, bottomInnerPadding: Dp = 0.dp) {
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
 
     var isLoading by remember { mutableStateOf(true) }
+    var hasLoadError by remember { mutableStateOf(false) }
     var logLines by remember { mutableStateOf(emptyList<String>()) }
     var filterQuery by remember { mutableStateOf("") }
 
@@ -112,7 +113,8 @@ fun LogsPage(onBack: () -> Unit, bottomInnerPadding: Dp = 0.dp) {
         scope.launch {
             isLoading = true
             val content = logRepo.load(LOG_LINE_COUNT)
-            logLines = (content ?: "").lines().filter { it.isNotBlank() }
+            hasLoadError = content == null
+            if (content != null) logLines = content.lines().filter { it.isNotBlank() }
             isLoading = false
         }
     }
@@ -179,16 +181,34 @@ fun LogsPage(onBack: () -> Unit, bottomInnerPadding: Dp = 0.dp) {
             ) {
                 CircularProgressIndicator()
             }
-        } else if (filteredLines.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(top = topPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(if (logLines.isEmpty()) R.string.logs_empty else R.string.logs_no_match),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                )
-            }
+        } else if (hasLoadError || filteredLines.isEmpty()) {
+            val hasFilter = filterQuery.isNotBlank()
+            PageMessageState(
+                icon = when {
+                    hasLoadError -> AppIcons.Warning
+                    hasFilter -> AppIcons.Search
+                    else -> AppIcons.Document
+                },
+                title = stringResource(when {
+                    hasLoadError -> R.string.logs_load_failed
+                    hasFilter -> R.string.logs_no_match
+                    else -> R.string.logs_empty
+                }),
+                message = stringResource(when {
+                    hasLoadError -> R.string.logs_load_failed_summary
+                    hasFilter -> R.string.logs_no_match_summary
+                    else -> R.string.empty_logs_summary
+                }),
+                contentPadding = PaddingValues(top = topPadding, bottom = bottomInnerPadding),
+                action = if (hasLoadError || hasFilter) {
+                    {
+                        PillButton(
+                            text = stringResource(if (hasLoadError) R.string.common_retry else R.string.browser_clear_search),
+                            onClick = { if (hasLoadError) loadLogs() else filterQuery = "" },
+                        )
+                    }
+                } else null,
+            )
         } else {
             // 日志列表
             LazyColumn(
@@ -224,18 +244,12 @@ fun LogsPage(onBack: () -> Unit, bottomInnerPadding: Dp = 0.dp) {
 private fun LogLineCard(lineNumber: Int, content: String, onCopy: () -> Unit) {
     val typeColor = getTypeColor(content)
     val colorScheme = MiuixTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(LOGS_CARD_CORNER_RADIUS))
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onCopy
-            ),
+            .clickable(onClick = onCopy),
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(
@@ -277,13 +291,7 @@ private fun LogLineCard(lineNumber: Int, content: String, onCopy: () -> Unit) {
                 )
             }
         }
-        if (isPressed) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(colorScheme.onSurface.copy(alpha = 0.08f))
-            )
-        }
+
     }
 }
 

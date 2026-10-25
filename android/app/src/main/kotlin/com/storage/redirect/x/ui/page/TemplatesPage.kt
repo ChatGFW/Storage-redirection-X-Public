@@ -1,6 +1,5 @@
 package com.storage.redirect.x.ui.page
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,6 +32,8 @@ import com.storage.redirect.x.data.model.RedirectConfig
 import com.storage.redirect.x.data.model.RedirectTemplate
 import com.storage.redirect.x.data.model.StoragePathMapping
 import com.storage.redirect.x.data.repository.TemplateRepository
+import com.storage.redirect.x.ui.component.PageMessageState
+import com.storage.redirect.x.ui.component.PillButton
 import com.storage.redirect.x.ui.component.PAGE_CONTENT_TOP_PADDING
 import com.storage.redirect.x.ui.component.PAGE_GROUP_GAP
 import com.storage.redirect.x.ui.component.PAGE_HORIZONTAL_PADDING
@@ -45,7 +46,7 @@ import com.storage.redirect.x.ui.navigation.rememberPageStack
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
+import com.storage.redirect.x.ui.component.SrxIconButton as IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -183,18 +184,16 @@ private fun TemplateListContent(
         },
     ) { padding ->
         if (templates.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = PAGE_HORIZONTAL_PADDING),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.templates_empty),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-            }
+            PageMessageState(
+                icon = AppIcons.Layers,
+                title = stringResource(R.string.templates_empty),
+                message = stringResource(R.string.empty_templates_summary),
+                contentPadding = padding,
+                modifier = Modifier.testTag("templates_empty_state"),
+                action = {
+                    PillButton(text = stringResource(R.string.templates_add), onClick = onAdd)
+                },
+            )
         } else {
             LazyColumn(
                 modifier = Modifier

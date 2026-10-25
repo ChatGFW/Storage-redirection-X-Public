@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,15 +40,14 @@ import com.storage.redirect.x.ui.icon.AppIcons
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
+import com.storage.redirect.x.ui.component.SrxIconButton as IconButton
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 // 规则配置页与模板编辑页共用：区块标题 + 规则卡片 + 卡片底部操作行
 private val RULE_CARD_CONTENT_PADDING = 16.dp
-private val RULE_CARD_EMPTY_PADDING = 24.dp
-private val RULE_CARD_ACTION_ROW_HEIGHT = 48.dp
+private val RULE_CARD_ACTION_ROW_HEIGHT = 60.dp
 
 // 区块标题，可带右侧说明按钮
 @Composable
@@ -158,6 +158,8 @@ private fun RuleRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .padding(start = RULE_CARD_CONTENT_PADDING, end = 4.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -180,9 +182,7 @@ private fun RuleRow(
 internal fun RuleEmptyRow(text: String) {
     Text(
         text = text,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(RULE_CARD_EMPTY_PADDING),
+        modifier = Modifier.fillMaxWidth().padding(24.dp),
         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         textAlign = TextAlign.Center,
     )
@@ -195,7 +195,9 @@ internal fun CardActionRow(content: @Composable RowScope.() -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(RULE_CARD_ACTION_ROW_HEIGHT),
+            .height(RULE_CARD_ACTION_ROW_HEIGHT)
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )
@@ -213,6 +215,7 @@ internal fun RowScope.CardActionButton(
         modifier = modifier
             .weight(1f)
             .fillMaxHeight()
+            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,

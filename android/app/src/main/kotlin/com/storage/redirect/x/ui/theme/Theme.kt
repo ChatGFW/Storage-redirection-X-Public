@@ -1,9 +1,11 @@
 package com.storage.redirect.x.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.materialkolor.dynamiccolor.ColorSpec
@@ -85,8 +87,11 @@ private fun MiuixAppTheme(
 
     MiuixTheme(
         controller = controller,
-        content = content,
-    )
+    ) {
+        val focusColor = MiuixTheme.colorScheme.primary
+        val feedback = remember(darkTheme, focusColor) { InteractionFeedback(darkTheme, focusColor) }
+        CompositionLocalProvider(LocalIndication provides feedback, content = content)
+    }
 }
 
 private fun ColorMode.toMiuixColorSchemeMode(): ColorSchemeMode {

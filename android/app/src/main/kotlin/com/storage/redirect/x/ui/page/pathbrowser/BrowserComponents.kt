@@ -29,14 +29,13 @@ internal data class BrowserColors(
     val selected: Color,
     val error: Color,
     val errorSelected: Color,
-    val folder: Color,
 )
 
 @Composable
 internal fun browserColors(): BrowserColors = MiuixTheme.colorScheme.let {
     BrowserColors(
         it.surfaceContainer, it.onSurface, it.onSurfaceVariantSummary, it.primary,
-        it.tertiaryContainer, it.error, it.errorContainer, Color(0xFFF0BD56),
+        it.tertiaryContainer, it.error, it.errorContainer,
     )
 }
 
