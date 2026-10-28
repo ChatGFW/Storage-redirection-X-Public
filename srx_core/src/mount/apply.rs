@@ -177,11 +177,8 @@ impl MountPlanner {
             let mut effective_paths: Vec<String> = Vec::with_capacity(effective_rules.len());
             for rule in effective_rules {
                 if has_path_wildcard(&rule) {
-                    let expanded = Self::expand_real_path_wildcard(
-                        &rule,
-                        &storage_path,
-                        &real_base_path,
-                    );
+                    let expanded =
+                        Self::expand_real_path_wildcard(&rule, &storage_path, &real_base_path);
                     if expanded.is_empty() {
                         log::warn!("allow wildcard no match: {}", rule);
                     } else if expanded.len() >= REAL_PATH_WILDCARD_EXPAND_LIMIT {

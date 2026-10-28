@@ -19,11 +19,8 @@ impl MountPlanner {
                 continue;
             }
             if has_path_wildcard(&resolved) {
-                let expanded = Self::expand_real_path_wildcard(
-                    &resolved,
-                    storage_path,
-                    storage_path,
-                );
+                let expanded =
+                    Self::expand_real_path_wildcard(&resolved, storage_path, storage_path);
                 if expanded.len() >= REAL_PATH_WILDCARD_EXPAND_LIMIT {
                     log::warn!(
                         "exclude wildcard limit path={} limit={}",

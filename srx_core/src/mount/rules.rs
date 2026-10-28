@@ -29,13 +29,7 @@ impl MountPlanner {
         }
 
         let mut expanded = Vec::new();
-        Self::expand_real_path_segments(
-            real_base_path,
-            storage_path,
-            &segments,
-            0,
-            &mut expanded,
-        );
+        Self::expand_real_path_segments(real_base_path, storage_path, &segments, 0, &mut expanded);
         expanded.sort();
         expanded.dedup();
         expanded
@@ -98,13 +92,7 @@ impl MountPlanner {
             return;
         }
         let storage_next = paths::join(storage_current, segment);
-        Self::expand_real_path_segments(
-            &real_next,
-            &storage_next,
-            segments,
-            index + 1,
-            expanded,
-        );
+        Self::expand_real_path_segments(&real_next, &storage_next, segments, index + 1, expanded);
     }
 }
 
