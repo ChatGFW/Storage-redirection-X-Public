@@ -8,8 +8,8 @@ use crate::zygisk::abi;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 static PLT_HOOK_INSTALLED: AtomicBool = AtomicBool::new(false);
-// 覆盖命名空间等待 5 秒、挂载 5 秒及终止宽限 1 秒，预留回包时间。
-const MOUNT_RESULT_TIMEOUT_SEC: u64 = 12;
+// 限制应用启动阶段的挂载等待，超时后记录失败并继续启动。
+const MOUNT_RESULT_TIMEOUT_SEC: u64 = 3;
 const POST_SPECIALIZE_SLOW_MS: i64 = 20;
 
 impl RuntimeFlow {
