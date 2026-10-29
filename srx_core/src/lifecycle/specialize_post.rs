@@ -93,7 +93,11 @@ fn read_mount_result(socket: Option<&UniqueFd>) -> bool {
             is_applied
         }
         Err(error) => {
-            log::warn!("mount result unavailable fd={} error={}", socket.get(), error);
+            log::warn!(
+                "mount result unavailable fd={} error={}",
+                socket.get(),
+                error
+            );
             false
         }
     }
