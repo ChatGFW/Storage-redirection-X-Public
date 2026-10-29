@@ -1,6 +1,5 @@
 mod diagnostics;
 mod stats;
-mod status_marker;
 mod sys;
 
 use super::companion_request::CompanionMountRequest;
@@ -14,7 +13,6 @@ use libc::{
     socketpair, waitpid,
 };
 use stats::update_redirect_stats;
-use status_marker::write_mount_status_marker;
 use sys::{c_str, decode_wait_status, errno_text, last_errno};
 
 // 父进程等待挂载结果超时；取值过短会在高负载/FUSE 异常时
@@ -36,42 +34,32 @@ pub fn execute_companion_mount_request(request: &CompanionMountRequest) -> bool 
     let mount_started_ms = monotonic_ms();
     let is_success = run_mount_in_forked_child(request);
     let mount_ms = monotonic_ms().saturating_sub(mount_started_ms);
-    let marker_started_ms = monotonic_ms();
-    let marker_ok =
-        write_mount_status_marker(&request.app_data_dir, request.pid, request.uid, is_success);
-    let marker_ms = monotonic_ms().saturating_sub(marker_started_ms);
-    log_companion_mount_perf(
-        request, is_success, marker_ok, wait_ms, mount_ms, marker_ms, started_ms,
-    );
+    log_companion_mount_perf(request, is_success, wait_ms, mount_ms, started_ms);
     is_success
 }
 
 fn log_companion_mount_perf(
     request: &CompanionMountRequest,
     is_success: bool,
-    marker_ok: bool,
     wait_ms: i64,
     mount_ms: i64,
-    marker_ms: i64,
     started_ms: i64,
 ) {
     let total_ms = monotonic_ms().saturating_sub(started_ms);
-    if total_ms < COMPANION_MOUNT_SLOW_MS && is_success && marker_ok {
+    if total_ms < COMPANION_MOUNT_SLOW_MS && is_success {
         return;
     }
     log::info!(
-        "perf companion mount pkg={} pid={} uid={} ok={} marker={} allow={} map={} map_only={} wait_ms={} mount_ms={} marker_ms={} total_ms={}",
+        "perf companion mount pkg={} pid={} uid={} ok={} allow={} map={} map_only={} wait_ms={} mount_ms={} total_ms={}",
         request.package_name,
         request.pid,
         request.uid,
         is_success,
-        marker_ok,
         request.allowed_real_paths.len(),
         request.path_mappings.len(),
         request.is_mapping_mode_only,
         wait_ms,
         mount_ms,
-        marker_ms,
         total_ms
     );
 }

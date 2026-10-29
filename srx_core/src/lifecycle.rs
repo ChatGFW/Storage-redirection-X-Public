@@ -2,10 +2,12 @@ mod boot;
 mod companion;
 mod companion_mount;
 mod companion_request;
+mod mount_result;
 mod specialize_post;
 mod specialize_pre;
 
 use crate::logging::Logger;
+use crate::platform::unique_fd::UniqueFd;
 use crate::zygisk::{abi, jni};
 
 pub use companion::run_companion_pipeline;
@@ -21,6 +23,7 @@ pub struct RuntimeFlow {
     should_monitor: bool,
     is_mount_applied: bool,
     is_mount_request_sent: bool,
+    companion_socket: Option<UniqueFd>,
     is_system_writer_hook_redirect: bool,
     should_install_fuse_fixer: bool,
     should_skip_post_work: bool,
@@ -45,6 +48,7 @@ impl RuntimeFlow {
             should_monitor: false,
             is_mount_applied: false,
             is_mount_request_sent: false,
+            companion_socket: None,
             is_system_writer_hook_redirect: false,
             should_install_fuse_fixer: false,
             should_skip_post_work: false,

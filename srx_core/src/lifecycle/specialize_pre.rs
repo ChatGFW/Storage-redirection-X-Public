@@ -14,9 +14,7 @@ use crate::platform::{self, fs};
 use crate::redirect::{PathRouter, policy};
 use crate::zygisk::{abi, jni};
 
-use companion::{
-    build_companion_request_payload, clear_mount_status_marker, send_companion_request_payload,
-};
+use companion::{build_companion_request_payload, send_companion_request_payload};
 use diagnostics::{
     install_java_hook, log_allowed_real_paths, log_excluded_real_paths, log_path_mappings,
     should_bypass_file_monitor_ui_process,
@@ -50,6 +48,7 @@ impl RuntimeFlow {
         self.should_redirect = false;
         self.should_monitor = false;
         self.is_mount_request_sent = false;
+        self.companion_socket = None;
         self.is_mount_applied = false;
         self.is_system_writer_hook_redirect = false;
         self.should_install_fuse_fixer = false;
@@ -265,7 +264,7 @@ impl RuntimeFlow {
 
         Logger::init(Some(&self.package_name));
         if writer_context.is_system_writer {
-            self.install_writer_config_watch();
+            self.install_writer_config_watch(args);
         }
 
         log::info!(
@@ -290,7 +289,7 @@ impl RuntimeFlow {
     }
 
     // 系统代写进程降权后仍可热更新：监听命名空间内可见的配置目录
-    fn install_writer_config_watch(&self) {
+    fn install_writer_config_watch(&self, args: &abi::AppSpecializeArgs) {
         log::info!("writer: file log off, logcat only");
         let config = SettingsHub::instance();
         let shared_apps_dir = format!("{}/apps", module_paths::SHARED_CONFIG_DIR);
@@ -305,7 +304,7 @@ impl RuntimeFlow {
         if let Some(api) = self.api.as_ref()
             && inotify_fd >= 0
         {
-            if api.exempt_fd(inotify_fd) {
+            if api.exempt_app_fd(inotify_fd, args) {
                 log::info!("config watch fd exempt fd={}", inotify_fd);
             } else {
                 log::warn!("config watch fd exempt failed fd={}", inotify_fd);
@@ -372,10 +371,6 @@ impl RuntimeFlow {
         } else {
             jni::get_jstring_utf8(self.env, unsafe { *args.app_data_dir })
         };
-
-        if !self.is_system_writer_hook_redirect {
-            clear_mount_status_marker(&self.app_data_dir, self.app_pid);
-        }
 
         if self.is_system_writer_hook_redirect {
             PathRouter::instance().configure(
@@ -449,7 +444,8 @@ impl RuntimeFlow {
         }
 
         let send_started_ms = monotonic_ms();
-        self.is_mount_request_sent = send_companion_request_payload(self.api.as_ref(), &payload);
+        self.companion_socket = send_companion_request_payload(self.api.as_ref(), args, &payload);
+        self.is_mount_request_sent = self.companion_socket.is_some();
         metrics.send_ms = monotonic_ms().saturating_sub(send_started_ms);
         self.log_specialize_exit("mount_request", is_system_writer, perf_started_ms, metrics);
     }

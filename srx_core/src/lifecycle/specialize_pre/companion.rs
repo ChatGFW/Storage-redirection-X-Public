@@ -1,7 +1,7 @@
 use crate::domain::PathMapping;
 use crate::platform::fs;
+use crate::platform::unique_fd::UniqueFd;
 use crate::zygisk::abi;
-use std::ffi::CString;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn build_companion_request_payload(
@@ -38,46 +38,37 @@ pub(super) fn build_companion_request_payload(
     serde_json::to_string(&payload).unwrap_or_default()
 }
 
-// 序列化挂载请求并通过伴生进程 fd 发送
-pub(super) fn send_companion_request_payload(api: Option<&abi::Api>, payload: &str) -> bool {
-    let Some(api) = api else {
-        return false;
-    };
+// pre 发送后保留 socket，post 读取挂载结果并关闭。
+pub(super) fn send_companion_request_payload(
+    api: Option<&abi::Api>,
+    args: &abi::AppSpecializeArgs,
+    payload: &str,
+) -> Option<UniqueFd> {
+    let api = api?;
     if payload.is_empty() {
-        return false;
+        return None;
     }
 
     let fd = api.connect_companion();
     if fd < 0 {
         log::warn!("companion connect failed");
-        return false;
+        return None;
+    }
+
+    let socket = UniqueFd::new(fd);
+    if !api.exempt_app_fd(fd, args) {
+        log::warn!("companion fd exemption failed fd={}", fd);
+        return None;
     }
 
     let payload_len = payload.len() as u32;
     let sent =
         fs::write_all(fd, &payload_len.to_ne_bytes()) && fs::write_all(fd, payload.as_bytes());
-    unsafe { libc::close(fd) };
-
     if !sent {
         log::warn!("companion send failed");
-        return false;
+        return None;
     }
 
-    log::info!("companion req sent (async mount)");
-    true
-}
-
-// 发送挂载请求前清理当前 PID 标记，避免读取到旧结果。
-pub(super) fn clear_mount_status_marker(app_data_dir: &str, app_pid: i32) {
-    if app_data_dir.is_empty() || app_pid <= 0 {
-        return;
-    }
-
-    let marker_path = format!("{}/.srx_mount_status_{}", app_data_dir, app_pid);
-    let Ok(c_path) = CString::new(marker_path.clone()) else {
-        return;
-    };
-    if unsafe { libc::unlink(c_path.as_ptr()) } == 0 {
-        log::info!("old marker cleared {}", marker_path);
-    }
+    log::info!("companion req sent fd={}", fd);
+    Some(socket)
 }

@@ -22,6 +22,7 @@ public class Hooker {
 
   private static boolean shouldInstallMonitorHooks;
   public static native void refreshProviderLibraries();
+  public static native void captureFuseCaller(int uid);
 
   public Method backup;
   private Member target;

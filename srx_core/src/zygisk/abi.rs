@@ -166,7 +166,7 @@ impl Api {
     }
 
     // 把 fd 登记成豁免项，specialize 结束后 Zygisk 不会强制关掉它
-    pub fn exempt_fd(&self, fd: c_int) -> bool {
+    fn exempt_fd(&self, fd: c_int) -> bool {
         unsafe {
             if let Some(func) = (*self.table).exempt_fd {
                 func(fd)
@@ -174,6 +174,11 @@ impl Api {
                 false
             }
         }
+    }
+
+    pub fn exempt_app_fd(&self, fd: c_int, args: &AppSpecializeArgs) -> bool {
+        // 独立 specialize 没有 FD 清理阶段，也没有 fds_to_ignore 参数。
+        args.fds_to_ignore.is_null() || self.exempt_fd(fd)
     }
 
     // 批量替换 Java 类的 native 方法，Zygisk 把原实现写回每条 method 的 fnPtr
