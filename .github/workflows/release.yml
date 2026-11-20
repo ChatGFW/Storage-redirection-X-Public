@@ -2,157 +2,163 @@ name: 构建正式版
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [ main ]
+    tags: [ 'v*', 'core-*' ]
   workflow_dispatch:
     inputs:
-      version:
-        description: '版本号（如 1.0.140，会自动添加 v 前缀）'
+      source_ref:
+        description: '闭源提交 SHA、标签或分支；留空使用 PRIVATE_SOURCE_REF'
+        required: false
+        type: string
+      previous_source_ref:
+        description: '闭源推送前的 SHA，用于判断 APK 和 core 版本变化'
+        required: false
+        type: string
+      tag:
+        description: '发布标签：vX.Y.Z 或 core-N；留空按闭源版本选择'
         required: false
         type: string
       publish_release:
-        description: '是否发布到当前仓库 Release'
+        description: '发布 Release；闭源自动触发且版本未变时只构建'
         required: true
         type: boolean
         default: true
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  PYTHONUTF8: '1'
+  PYTHONDONTWRITEBYTECODE: '1'
 
 jobs:
   prepare:
-    name: 准备构建元信息
+    name: 获取闭源版本与更新日志
+    if: github.repository == 'Kindness-Kismet/storage-redirection-x'
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.tag.outputs.tag }}
-      publish_release: ${{ steps.publish.outputs.publish_release }}
+      source_sha: ${{ steps.source.outputs.sha }}
+      app_version: ${{ steps.version.outputs.app_version }}
+      core_version: ${{ steps.version.outputs.core_version }}
+      tag: ${{ steps.release.outputs.tag }}
+      publish_release: ${{ steps.release.outputs.publish_release }}
       changelog_base64: ${{ steps.changelog.outputs.changelog_base64 }}
 
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v7.0.0
+      - name: 检查闭源访问配置
+        shell: bash
+        env:
+          SOURCE_TOKEN: ${{ secrets.PRIVATE_SOURCE_TOKEN }}
+          SOURCE_REPOSITORY: ${{ vars.PRIVATE_SOURCE_REPOSITORY }}
+          SOURCE_REF: ${{ inputs.source_ref || vars.PRIVATE_SOURCE_REF }}
+        run: |
+          set -euo pipefail
+          : "${SOURCE_TOKEN:?请配置 PRIVATE_SOURCE_TOKEN Secret}"
+          : "${SOURCE_REPOSITORY:?请配置 PRIVATE_SOURCE_REPOSITORY Variable}"
+          : "${SOURCE_REF:?请配置 PRIVATE_SOURCE_REF Variable 或传入 source_ref}"
 
-      - name: 读取版本号
+      - name: 获取闭源源码
+        uses: actions/checkout@v7.0.0
+        with:
+          repository: ${{ vars.PRIVATE_SOURCE_REPOSITORY }}
+          ref: ${{ inputs.source_ref || vars.PRIVATE_SOURCE_REF }}
+          token: ${{ secrets.PRIVATE_SOURCE_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: false
+          show-progress: false
+
+      - name: 固定闭源提交
+        id: source
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+
+      - name: 配置 Python
+        uses: actions/setup-python@v6.3.0
+        with:
+          python-version: '3.x'
+
+      - name: 获取版本号
         id: version
         shell: bash
-        run: |
-          version=$(grep '^appVersionName=' android/gradle.properties | cut -d= -f2 | tr -d '[:space:]')
-          if [ -z "${version}" ]; then
-            echo "无法从 android/gradle.properties 读取版本号" >&2
-            exit 1
-          fi
-          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+        run: python scripts/build_support/versions.py >> "${GITHUB_OUTPUT}"
 
-      - name: 读取并展示更新日志
+      - name: 选择发布标签与发布条件
+        id: release
+        shell: python
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          PREVIOUS_SOURCE_REF: ${{ inputs.previous_source_ref }}
+          REQUEST_PUBLISH: ${{ inputs.publish_release }}
+          APP_VERSION: ${{ steps.version.outputs.app_version }}
+          APP_VERSION_CODE: ${{ steps.version.outputs.app_version_code }}
+          CORE_VERSION: ${{ steps.version.outputs.core_version }}
+        run: |
+          import os
+          import re
+          import subprocess
+          import tomllib
+
+          app_tag = f"v{os.environ['APP_VERSION']}"
+          core_tag = f"core-{os.environ['CORE_VERSION']}"
+          event = os.environ['GITHUB_EVENT_NAME']
+          ref = os.environ['GITHUB_REF']
+          tag = os.environ['INPUT_TAG']
+          should_publish = os.environ['REQUEST_PUBLISH'] == 'true'
+          if ref.startswith('refs/tags/'):
+              tag = ref.removeprefix('refs/tags/')
+              should_publish = True
+          elif event == 'push':
+              should_publish = False
+
+          previous = os.environ['PREVIOUS_SOURCE_REF']
+          if previous and previous != '0' * 40:
+              if re.fullmatch(r'[0-9a-f]{40}', previous) is None:
+                  raise SystemExit('previous_source_ref 必须是完整提交 SHA')
+              properties = subprocess.check_output(
+                  ['git', 'show', f'{previous}:android/gradle.properties'], text=True)
+              previous_app = dict(line.strip().split('=', 1) for line in properties.splitlines() if '=' in line)
+              manifest = subprocess.check_output(
+                  ['git', 'show', f'{previous}:srx_core/Cargo.toml'], text=True)
+              previous_core = tomllib.loads(manifest)['package']['version']
+              app_changed = (previous_app['appVersionName'] != os.environ['APP_VERSION'] or
+                             previous_app['appVersionCode'] != os.environ['APP_VERSION_CODE'])
+              core_changed = previous_core != f"{os.environ['CORE_VERSION']}.0.0"
+              if not tag:
+                  tag = app_tag if app_changed or not core_changed else core_tag
+                  should_publish = should_publish and (app_changed or core_changed)
+          tag = tag or app_tag
+          if tag not in (app_tag, core_tag):
+              raise SystemExit(f'标签必须匹配 {app_tag} 或 {core_tag}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write(f'tag={tag}\npublish_release={str(should_publish).lower()}\n')
+
+      - name: 获取闭源更新日志
         id: changelog
         shell: bash
         run: |
-          changelog_file=".github/CHANGELOG.md"
-          if [ ! -f "${changelog_file}" ]; then
-            echo "缺少更新日志文件: ${changelog_file}" >&2
-            exit 1
-          fi
-          echo "========== 本次更新日志 =========="
-          cat "${changelog_file}"
-          changelog_base64="$(base64 -w 0 "${changelog_file}")"
-          printf 'changelog_base64=%s\n' "${changelog_base64}" >> "${GITHUB_OUTPUT}"
-
-      - name: 解析发布 Tag
-        id: tag
-        shell: bash
-        run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            input_version="${{ github.event.inputs.version }}"
-            input_version="${input_version#v}"
-            tag="v${input_version}"
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            tag="${{ github.ref_name }}"
-          else
-            tag="v${{ steps.version.outputs.version }}"
-          fi
-          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
-
-      - name: 校验版本号一致性
-        shell: bash
-        run: |
-          tag="${{ steps.tag.outputs.tag }}"
-          gradle_version="${{ steps.version.outputs.version }}"
-          tag_version="${tag#v}"
-          if [ "${tag_version}" != "${gradle_version}" ]; then
-            echo "Tag 版本 (${tag_version}) 与 gradle.properties 版本 (${gradle_version}) 不一致" >&2
-            exit 1
-          fi
-
-      - name: 判定是否发布
-        id: publish
-        shell: bash
-        run: |
-          should_publish=false
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            should_publish="${{ github.event.inputs.publish_release }}"
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            should_publish=true
-          fi
-          echo "publish_release=${should_publish}" >> "${GITHUB_OUTPUT}"
-
-      - name: 验证签名配置
-        id: signing
-        shell: bash
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
           set -euo pipefail
-          has_signing=true
-          missing_keys=()
-          for key in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
-            if [ -z "${!key}" ]; then
-              has_signing=false
-              missing_keys+=("${key}")
-            fi
-          done
-          echo "has_signing=${has_signing}" >> "${GITHUB_OUTPUT}"
-          if [ "${has_signing}" = "false" ]; then
-            echo "::warning::未配置签名 Secrets，将使用 debug 签名"
-            printf '缺少签名配置: %s\n' "${missing_keys[*]}" >&2
-            exit 0
-          fi
-          keystore_path="${RUNNER_TEMP}/release.jks"
-          if ! printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"; then
-            echo "签名库解码失败: ANDROID_KEYSTORE_BASE64" >&2
-            exit 1
-          fi
-          if ! keytool -list -keystore "${keystore_path}" \
-            -storepass "${ANDROID_KEYSTORE_PASSWORD}" \
-            -alias "${ANDROID_KEY_ALIAS}" > /dev/null; then
-            echo "签名库校验失败: 请检查 ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS" >&2
-            exit 1
-          fi
-          echo "签名验证通过"
+          test -s .github/CHANGELOG.md
+          printf 'changelog_base64=%s\n' "$(base64 -w 0 .github/CHANGELOG.md)" >> "${GITHUB_OUTPUT}"
 
   build:
     name: 构建 (${{ matrix.abi }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     needs: prepare
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - abi: arm64-v8a
-          - abi: x86_64
+        abi: [ arm64-v8a, x86_64 ]
 
     steps:
-      - name: 检出代码
+      - name: 获取固定的闭源提交
         uses: actions/checkout@v7.0.0
         with:
-          submodules: true
-
-      - name: 初始化 LSPlant 构建依赖
-        run: git -C srx_core/third_party/lsplant submodule update --init --recursive -- lsplant/src/main/jni/external/dex_builder
+          repository: ${{ vars.PRIVATE_SOURCE_REPOSITORY }}
+          ref: ${{ needs.prepare.outputs.source_sha }}
+          token: ${{ secrets.PRIVATE_SOURCE_TOKEN }}
+          persist-credentials: false
+          show-progress: false
 
       - name: 配置 Java
         uses: actions/setup-java@v5.4.0
@@ -181,120 +187,132 @@ jobs:
       - name: 安装 NDK 和 CMake
         shell: bash
         run: |
+          set -euo pipefail
           (yes | sdkmanager --licenses > /dev/null) || true
           ndk_version="30.0.16248370"
           latest_cmake_pkg=$(sdkmanager --list | tr -d '\r' | grep -oE 'cmake;[0-9][0-9.]+' | sort -Vu | tail -n 1)
-          sdkmanager "platforms;android-37.0" "build-tools;36.0.0" "ndk;${ndk_version}" "${latest_cmake_pkg}"
+          sdkmanager "platforms;android-37.2" "build-tools;36.0.0" "ndk;${ndk_version}" "${latest_cmake_pkg}"
           echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/${ndk_version}" >> "${GITHUB_ENV}"
           cmake_version="${latest_cmake_pkg#cmake;}"
           echo "${ANDROID_SDK_ROOT}/cmake/${cmake_version}/bin" >> "${GITHUB_PATH}"
 
-      - name: 准备 APK 签名
+      - name: 准备并验证 APK 签名
+        if: startsWith(needs.prepare.outputs.tag, 'v')
         id: signing
         shell: bash
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ -z "${ANDROID_KEYSTORE_BASE64}" ]; then
-            echo "未配置签名 Secrets，将使用 debug 签名"
-            exit 0
-          fi
+          for key in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!key}" ]; then
+              echo "::error::缺少签名 Secret: ${key}"
+              exit 1
+            fi
+          done
           keystore_path="${RUNNER_TEMP}/release.jks"
-          if ! printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"; then
-            echo "签名库解码失败: ANDROID_KEYSTORE_BASE64" >&2
-            exit 1
-          fi
+          printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"
+          keytool -list -keystore "${keystore_path}" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD \
+            -alias "${ANDROID_KEY_ALIAS}" > /dev/null
           echo "keystore_path=${keystore_path}" >> "${GITHUB_OUTPUT}"
 
-      - name: 构建 Zygisk (${{ matrix.abi }})
-        run: python scripts/build.py build-zygisk --abi ${{ matrix.abi }} -v
-
-      - name: 构建 APK
+      - name: 构建闭源产物
+        shell: bash
         env:
+          BUILD_ABI: ${{ matrix.abi }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
           ANDROID_KEYSTORE_PATH: ${{ steps.signing.outputs.keystore_path }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: python scripts/build.py build-apk --abi ${{ matrix.abi }} -v
+        run: |
+          set -euo pipefail
+          # 编译诊断可能包含闭源代码，仅保存在本次 runner 的临时目录。
+          exec 3>&1
+          exec > "${RUNNER_TEMP}/private-build.log" 2>&1
+          trap 'echo "::error::闭源构建失败；详细日志不公开上传，请在闭源环境复现。" >&3' ERR
+          python scripts/prebuild.py
+          python scripts/build.py build-zygisk --abi "${BUILD_ABI}"
+          if [[ "${RELEASE_TAG}" == v* ]]; then
+            python scripts/build.py build-apk --abi "${BUILD_ABI}"
+          fi
 
-      - name: 上传产物
+      - name: 上传二进制产物
         uses: actions/upload-artifact@v7.0.1
         with:
           name: build-${{ matrix.abi }}
           path: |
-            build/zygisk/
-            build/apk/
+            build/zygisk/*.zip
+            build/apk/*.apk
           if-no-files-found: error
           retention-days: 30
 
   release:
-    name: 发布到当前仓库
+    name: 发布到开源仓库
     needs: [prepare, build]
     runs-on: ubuntu-latest
     if: needs.prepare.outputs.publish_release == 'true'
+    permissions:
+      contents: write
     concurrency:
       group: release-${{ needs.prepare.outputs.tag }}
       cancel-in-progress: false
 
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v7.0.0
-
-      - name: 下载所有构建产物
+      - name: 下载二进制产物
         uses: actions/download-artifact@v8.0.1
         with:
           pattern: build-*
           path: release/
           merge-multiple: true
 
-      - name: 使用 gh 发布到当前仓库
+      - name: 发布产物与闭源更新日志
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-          RELEASE_NAME: Storage Redirection X ${{ needs.prepare.outputs.version }}
+          RELEASE_NAME: Storage Redirect X · APK ${{ needs.prepare.outputs.app_version }} / core ${{ needs.prepare.outputs.core_version }}
           CHANGELOG_BASE64: ${{ needs.prepare.outputs.changelog_base64 }}
           RELEASE_DONATION_NOTICE: |-
             出于维护考虑，如果你喜欢我的工作，还请考虑捐赠我，因为用爱开发始终是不长久的，谢谢你们
             [爱发电](https://afdian.com/a/KiritoXD)
         run: |
           set -euo pipefail
-
-          changelog_file="$(mktemp)"
+          changelog_file="${RUNNER_TEMP}/changelog.md"
           printf '%s' "${CHANGELOG_BASE64}" | base64 -d > "${changelog_file}"
-          if [ ! -s "${changelog_file}" ]; then
-            echo "更新日志为空，停止发布" >&2
-            exit 1
-          fi
-
+          test -s "${changelog_file}"
           is_prerelease=false
           if [[ "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta[0-9]+$ ]]; then
             is_prerelease=true
           fi
-
-          release_notes_file="$(mktemp)"
+          make_latest=false
+          if [[ "${RELEASE_TAG}" == v* ]] && [ "${is_prerelease}" = "false" ]; then
+            make_latest=true
+          fi
+          release_notes_file="${RUNNER_TEMP}/release-notes.md"
           {
             printf '%s\n\n' "${RELEASE_DONATION_NOTICE}"
             cat "${changelog_file}"
           } > "${release_notes_file}"
-
-          echo "========== 发布说明 =========="
-          cat "${release_notes_file}"
-
           if gh release view "${RELEASE_TAG}" > /dev/null 2>&1; then
             gh release edit "${RELEASE_TAG}" \
               --title "${RELEASE_NAME}" \
               --prerelease="${is_prerelease}" \
+              --latest="${make_latest}" \
               --notes-file "${release_notes_file}"
           else
             gh release create "${RELEASE_TAG}" \
-              --target main \
+              --target "${GITHUB_SHA}" \
               --title "${RELEASE_NAME}" \
               --prerelease="${is_prerelease}" \
+              --latest="${make_latest}" \
               --notes-file "${release_notes_file}"
           fi
-
           mapfile -t release_assets < <(
             find release -type f \( -name '*.zip' -o -name '*.apk' \) | sort
           )
@@ -302,7 +320,4 @@ jobs:
             echo "没有找到可发布产物" >&2
             exit 1
           fi
-
-          gh release upload "${RELEASE_TAG}" \
-            "${release_assets[@]}" \
-            --clobber
+          gh release upload "${RELEASE_TAG}" "${release_assets[@]}" --clobber
